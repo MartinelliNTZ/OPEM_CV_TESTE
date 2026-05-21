@@ -1,0 +1,113 @@
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 15:37:37
+# SCRIPT: TREE_v7.PY (v7.3 - SEM NDVI, SWAP DETECTION POR PONTOS)
+################################################################################
+
+[15:37:37] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v9_final\process\process_info.txt
+[15:37:37] Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v9_final
+[15:37:37] Features: R, G, B, H, S, V, ExG (7 features, SEM NIR/alpha)
+[15:37:37] ============================================================
+[15:37:37] ETAPA 1: EXTRACAO DE FEATURES (TREINAMENTO)
+[15:37:37] ============================================================
+[15:37:37] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:37:37] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:37:37] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:37:37] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[15:37:37] Resolucao (GSD): 0.499974 m/pixel
+[15:37:37] CRS: EPSG:31982
+[15:37:37] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[15:37:37] Buffer de treinamento: 1m -> 3 pixels
+[15:37:37] Usando bandas 1(R), 2(G), 3(B) para features
+[15:37:37] Banda 4 ignorada (canal alpha, nao NIR)
+[15:37:38] 
+Processo interrompido pelo usuario!
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 15:37:44
+# SCRIPT: TREE_v7.PY (v7.3 - SEM NDVI, SWAP DETECTION POR PONTOS)
+################################################################################
+
+[15:37:44] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v9_final\process\process_info.txt
+[15:37:44] Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v9_final
+[15:37:44] Features: R, G, B, H, S, V, ExG (7 features, SEM NIR/alpha)
+[15:37:44] ============================================================
+[15:37:44] ETAPA 1: EXTRACAO DE FEATURES (TREINAMENTO)
+[15:37:44] ============================================================
+[15:37:44] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:37:44] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:37:44] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:37:44] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[15:37:44] Resolucao (GSD): 0.499974 m/pixel
+[15:37:44] CRS: EPSG:31982
+[15:37:44] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[15:37:44] Buffer de treinamento: 1m -> 3 pixels
+[15:37:44] Usando bandas 1(R), 2(G), 3(B) para features
+[15:37:44] Banda 4 ignorada (canal alpha, nao NIR)
+[15:37:51] Extraindo 2094 pontos de Arvores...
+[15:37:51]   -> Arvores: 2094 pontos dentro da imagem, 0 fora dos limites
+[15:37:51] Extraindo 2090 pontos de Solo...
+[15:37:51]   -> Solo: 2090 pontos dentro da imagem, 0 fora dos limites
+[15:37:51] 
+Resumo da extracao:
+[15:37:51]   -> Features por pixel: R(1) G(1) B(1) | H(1) S(1) V(1) | ExG(1) = 7 features
+[15:37:51]   -> Total de pixels de arvore para treino: 75,384
+[15:37:51]   -> Total de pixels de solo para treino: 75,240
+[15:37:51]   -> Total de amostras (pixels): 150,624
+[15:37:51]   -> Proporcao arvore/solo: 1.00
+[15:37:52] 
+============================================================
+[15:37:52] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[15:37:52] ============================================================
+[15:37:52] Tamanho do conjunto de treino: 120,499 pixels
+[15:37:52] Tamanho do conjunto de teste: 30,125 pixels
+[15:37:52] Distribuicao treino - Arvore(1): 60434, Solo(0): 60065
+[15:37:52] Distribuicao teste  - Arvore(1): 14950, Solo(0): 15175
+[15:37:52] Treinando Random Forest (n_estimators=100, max_depth=20)...
+[15:37:53] 
+Tempo de treinamento: 0:00:01
+[15:37:53] Acuracia: 0.9283
+[15:37:53] Relatorio de Classificacao:
+              precision    recall  f1-score   support
+
+           0       0.91      0.95      0.93     15175
+           1       0.95      0.91      0.93     14950
+
+    accuracy                           0.93     30125
+   macro avg       0.93      0.93      0.93     30125
+weighted avg       0.93      0.93      0.93     30125
+
+[15:37:53] 
+Importancia das Features (Random Forest):
+[15:37:53]   ExG: 0.2895 (29.0%)
+[15:37:53]   H: 0.1901 (19.0%)
+[15:37:53]   S: 0.1641 (16.4%)
+[15:37:53]   B: 0.1147 (11.5%)
+[15:37:53]   R: 0.1006 (10.1%)
+[15:37:53]   V: 0.0754 (7.5%)
+[15:37:53]   G: 0.0655 (6.6%)
+[15:37:53] 
+Classes do modelo (ordem predict_proba): [0 1]
+[15:37:53] Numero de classes: 2
+[15:37:53] ATENCAO: predict_proba[:, 0] -> classe 0, predict_proba[:, 1] -> classe 1
+[15:37:53] 
+Configuracoes da Pipeline:
+[15:37:53]   -> Tamanho do chunk: 1024x1024 pixels
+[15:37:53]   -> Tamanho do batch de predicao: 200,000 pixels
+[15:37:53]   -> Threshold Watershed: P > 0.3 para inclusao mascara
+[15:37:53]   -> Area minima poligonos: 5 pixels²
+[15:37:53]   -> Features: R, G, B, H, S, V, ExG (7 features, sem NIR)
+[15:37:53] 
+[INFO] Mapeamento de classes: rf_model.classes_ = [0 1]
+[15:37:53] [INFO] tree_class_idx = 1 (probabilidade de arvore, classe 1)
+[15:37:53] [INFO] soil_class_idx = 0 (probabilidade de solo, classe 0)
+[15:37:53] [INFO] modelo espera 7 features de entrada
+[15:37:53] 
+[3.1] Criando marcadores a partir dos pontos de treino...
+[15:37:53]   -> Marcadores de arvore: 2094
+[15:37:53]   -> Marcadores de solo: 2090
+[15:37:53]   -> Total de marcadores: 4184
+[15:37:53]   -> Tempo: 0:00:00
+[15:37:53] 
+[3.2] Classificando a imagem inteira com Random Forest...
+[15:37:53]   -> Dimensoes: 8653x10221 pixels = 88,442,313 pixels

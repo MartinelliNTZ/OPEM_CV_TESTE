@@ -22,7 +22,7 @@ INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif"
 TRAINING_POINTS_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp"
 
 # Caminho para o diretório de saída
-OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\resultados_watershed"
+OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v4"
 
 # Nome do arquivo de saída
 OUTPUT_FILENAME = "arvores_segmentadas_watershed.geojson"

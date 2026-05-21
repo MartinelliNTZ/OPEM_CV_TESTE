@@ -1,0 +1,221 @@
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 15:36:08
+# SCRIPT: generate_probability_maps.py
+################################################################################
+
+[15:36:08] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final\Imaru2_process_info.txt
+[15:36:08] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:36:08] Pontos de treino de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:36:08] Pontos de treino de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:36:08] Features: R, G, B, H, S, V, ExG (7 features)
+[15:36:08] ============================================================
+[15:36:08] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[15:36:08] ============================================================
+[15:36:08] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:36:08] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:36:08] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:36:08] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[15:36:08] Resolucao (GSD): 0.499974 m/pixel
+[15:36:08] CRS: EPSG:31982
+[15:36:08] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[15:36:08] Buffer de treinamento: 1m -> 3 pixels
+[15:36:08] Usando bandas 1(R), 2(G), 3(B) para features
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 15:36:15
+# SCRIPT: generate_probability_maps.py
+################################################################################
+
+[15:36:15] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final\Imaru2_process_info.txt
+[15:36:15] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:36:15] Pontos de treino de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:36:15] Pontos de treino de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:36:15] Features: R, G, B, H, S, V, ExG (7 features)
+[15:36:15] ============================================================
+[15:36:15] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[15:36:15] ============================================================
+[15:36:15] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:36:15] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:36:15] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:36:15] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[15:36:15] Resolucao (GSD): 0.499974 m/pixel
+[15:36:15] CRS: EPSG:31982
+[15:36:15] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[15:36:15] Buffer de treinamento: 1m -> 3 pixels
+[15:36:15] Usando bandas 1(R), 2(G), 3(B) para features
+[15:36:20] Extraindo 2094 pontos de Arvores...
+[15:36:21]   -> Arvores: 2094 pontos dentro da imagem, 0 fora dos limites
+[15:36:21] Extraindo 2090 pontos de Solo...
+[15:36:21]   -> Solo: 2090 pontos dentro da imagem, 0 fora dos limites
+[15:36:21] 
+Resumo da extracao:
+[15:36:21]   -> Features por pixel: R(1) G(1) B(1) | H(1) S(1) V(1) | ExG(1) = 7 features
+[15:36:21]   -> Total de pixels de arvore para treino: 75,384
+[15:36:21]   -> Total de pixels de solo para treino: 75,240
+[15:36:21]   -> Total de amostras (pixels): 150,624
+[15:36:21]   -> Proporcao arvore/solo: 1.00
+[15:36:21] 
+============================================================
+[15:36:21] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[15:36:21] ============================================================
+[15:36:21] Tamanho do conjunto de treino: 120,499 pixels
+[15:36:21] Tamanho do conjunto de teste: 30,125 pixels
+[15:36:21] Distribuicao treino - Arvore(1): 60434, Solo(0): 60065
+[15:36:21] Distribuicao teste  - Arvore(1): 14950, Solo(0): 15175
+[15:36:21] Treinando Random Forest (n_estimators=100, max_depth=20)...
+[15:36:22] 
+Tempo de treinamento: 0:00:00
+[15:36:22] Acuracia: 0.9283
+[15:36:22] Relatorio de Classificacao:
+              precision    recall  f1-score   support
+
+           0       0.91      0.95      0.93     15175
+           1       0.95      0.91      0.93     14950
+
+    accuracy                           0.93     30125
+   macro avg       0.93      0.93      0.93     30125
+weighted avg       0.93      0.93      0.93     30125
+
+[15:36:22] 
+Importancia das Features (Random Forest):
+[15:36:22]   ExG: 0.2895 (29.0%)
+[15:36:22]   H: 0.1901 (19.0%)
+[15:36:22]   S: 0.1641 (16.4%)
+[15:36:22]   B: 0.1147 (11.5%)
+[15:36:22]   R: 0.1006 (10.1%)
+[15:36:22]   V: 0.0754 (7.5%)
+[15:36:22]   G: 0.0655 (6.6%)
+[15:36:22] 
+Classes do modelo (ordem predict_proba): [0 1]
+[15:36:22] Numero de classes: 2
+[15:36:22] 
+============================================================
+[15:36:22] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE
+[15:36:22] ============================================================
+[15:36:22] 
+Configuracoes de Geracao de Mapas:
+[15:36:22]   -> Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:36:22]   -> Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final
+[15:36:22]   -> Nome base dos arquivos de saida: Imaru2
+[15:36:22]   -> Tamanho do chunk: 1024x1024 pixels
+[15:36:22]   -> Tamanho do batch de predicao: 200,000 pixels
+[15:36:22]   -> Features: R, G, B, H, S, V, ExG (7 features)
+[15:36:22] 
+[INFO] Mapeamento de classes: rf_model.classes_ = [0 1]
+[15:36:22] [INFO] tree_class_idx = 1 (probabilidade de arvore, classe 1)
+[15:36:22] [INFO] soil_class_idx = 0 (probabilidade de solo, classe 0)
+[15:36:22] 
+Classificando a imagem inteira com Random Forest...
+[15:36:22]   -> Dimensoes: 8653x10221 pixels = 88,442,313 pixels
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 15:40:03
+# SCRIPT: generate_probability_maps.py
+################################################################################
+
+[15:40:03] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final\Imaru2_process_info.txt
+[15:40:03] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:40:03] Pontos de treino de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:40:03] Pontos de treino de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:40:03] Features: R, G, B, H, S, V, ExG (7 features)
+[15:40:03] ============================================================
+[15:40:03] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[15:40:03] ============================================================
+[15:40:03] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:40:03] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[15:40:03] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[15:40:03] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[15:40:03] Resolucao (GSD): 0.499974 m/pixel
+[15:40:03] CRS: EPSG:31982
+[15:40:03] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[15:40:03] Buffer de treinamento: 1m -> 3 pixels
+[15:40:03] Usando bandas 1(R), 2(G), 3(B) para features
+[15:40:10] Extraindo 2094 pontos de Arvores...
+[15:40:10]   -> Arvores: 2094 pontos dentro da imagem, 0 fora dos limites
+[15:40:10] Extraindo 2090 pontos de Solo...
+[15:40:11]   -> Solo: 2090 pontos dentro da imagem, 0 fora dos limites
+[15:40:11] 
+Resumo da extracao:
+[15:40:11]   -> Features por pixel: R(1) G(1) B(1) | H(1) S(1) V(1) | ExG(1) = 7 features
+[15:40:11]   -> Total de pixels de arvore para treino: 75,384
+[15:40:11]   -> Total de pixels de solo para treino: 75,240
+[15:40:11]   -> Total de amostras (pixels): 150,624
+[15:40:11]   -> Proporcao arvore/solo: 1.00
+[15:40:11] 
+============================================================
+[15:40:11] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[15:40:11] ============================================================
+[15:40:11] Tamanho do conjunto de treino: 120,499 pixels
+[15:40:11] Tamanho do conjunto de teste: 30,125 pixels
+[15:40:11] Distribuicao treino - Arvore(1): 60434, Solo(0): 60065
+[15:40:11] Distribuicao teste  - Arvore(1): 14950, Solo(0): 15175
+[15:40:11] Treinando Random Forest (n_estimators=100, max_depth=20)...
+[15:40:13] 
+Tempo de treinamento: 0:00:01
+[15:40:13] Acuracia: 0.9283
+[15:40:13] Relatorio de Classificacao:
+              precision    recall  f1-score   support
+
+           0       0.91      0.95      0.93     15175
+           1       0.95      0.91      0.93     14950
+
+    accuracy                           0.93     30125
+   macro avg       0.93      0.93      0.93     30125
+weighted avg       0.93      0.93      0.93     30125
+
+[15:40:13] 
+Importancia das Features (Random Forest):
+[15:40:13]   ExG: 0.2895 (29.0%)
+[15:40:13]   H: 0.1901 (19.0%)
+[15:40:13]   S: 0.1641 (16.4%)
+[15:40:13]   B: 0.1147 (11.5%)
+[15:40:13]   R: 0.1006 (10.1%)
+[15:40:13]   V: 0.0754 (7.5%)
+[15:40:13]   G: 0.0655 (6.6%)
+[15:40:13] 
+Classes do modelo (ordem predict_proba): [0 1]
+[15:40:13] Numero de classes: 2
+[15:40:13] 
+============================================================
+[15:40:13] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE
+[15:40:13] ============================================================
+[15:40:13] 
+Configuracoes de Geracao de Mapas:
+[15:40:13]   -> Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[15:40:13]   -> Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final
+[15:40:13]   -> Nome base dos arquivos de saida: Imaru2
+[15:40:13]   -> Tamanho do chunk: 1024x1024 pixels
+[15:40:13]   -> Tamanho do batch de predicao: 200,000 pixels
+[15:40:13]   -> Features: R, G, B, H, S, V, ExG (7 features)
+[15:40:13] 
+[INFO] Mapeamento de classes: rf_model.classes_ = [0 1]
+[15:40:13] [INFO] tree_class_idx = 1 (probabilidade de arvore, classe 1)
+[15:40:13] [INFO] soil_class_idx = 0 (probabilidade de solo, classe 0)
+[15:40:13] 
+Classificando a imagem inteira com Random Forest...
+[15:40:13]   -> Dimensoes: 8653x10221 pixels = 88,442,313 pixels
+[15:42:11]   -> Total de chunks processados: 90
+[15:42:11]   -> Tempo de classificacao: 0:01:58
+[15:42:11]   -> Velocidade media: 0.75M pixels/s
+[15:42:11] 
+  -> Estatisticas prob_map_trees:
+[15:42:11]       min=0.0000, max=1.0000, mean=0.8018, std=0.2921
+[15:42:11]   -> Estatisticas prob_map_soil:
+[15:42:12]       min=0.0000, max=1.0000, mean=0.1982, std=0.2921
+[15:42:12] 
+  -> FIX INVERSION (verificacao nos pontos de treino):
+[15:42:12]       P(arvore medio) nos PONTOS DE ARVORE: 0.8892
+[15:42:12]       P(solo medio) nos PONTOS DE SOLO: 0.8955
+[15:42:12]       OK: Mapas nao parecem invertidos.
+[15:42:13] 
+  -> Mapas de probabilidade salvos:
+[15:42:13]      - D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final\Imaru2_prob_trees.tif (P de ser arvore)
+[15:42:13]      - D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final\Imaru2_prob_soil.tif (P de ser solo)
+[15:42:13] 
+  -> Tempo total de geracao de mapas: 0:02:00
+[15:42:14] 
+============================================================
+[15:42:14] PROCESSO CONCLUIDO em 0:02:10
+[15:42:14] Termino: 21/05/2026 15:42:14
+[15:42:14] ============================================================

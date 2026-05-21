@@ -1,4 +1,3 @@
-
 import rasterio
 import cv2
 import numpy as np
@@ -18,7 +17,7 @@ from tqdm import tqdm
 # =============================================================================
 INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif"
 BUFFER_SIZE_METERS = 1
-OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final"
+OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final_"
 
 # Novo dicionário de configuração para classes
 CLASSIFICATION_CONFIG = {
@@ -362,31 +361,38 @@ def generate_probability_maps(
                 
                 # Criar um cabeçalho LAS
                 header = laspy.LasHeader(point_format=3, version="1.2") # Formato 3 inclui intensidade, RGB, tempo GPS
-                header.add_extra_dimension(laspy.ExtraBytesParams(name="confidence", type=np.float32))
+                header.add_extra_dims([laspy.ExtraBytesParams(name="confidence", type=np.float32)])
                 
                 # Definir offsets e escalas para coordenadas
-                # Isso é importante para manter a precisão e reduzir o tamanho do arquivo
                 min_x, min_y = np.min(all_points_for_class[:, 0]), np.min(all_points_for_class[:, 1])
                 
-                # Definir offsets e escalas para coordenadas
-                # Isso é importante para manter a precisão e reduzir o tamanho do arquivo
-                # Para Z, usaremos um offset padrão se não houver dados de elevação reais
                 header.x_offset = min_x
                 header.y_offset = min_y
-                header.z_offset = 0.0 # Offset padrão para Z se não houver dados de elevação reais
-                header.x_scale = 0.001 # 1 mm de precisão
+                header.z_offset = 0.0
+                header.x_scale = 0.001
                 header.y_scale = 0.001
                 header.z_scale = 0.001
 
                 las = laspy.LasData(header)
                 las.x = all_points_for_class[:, 0]
                 las.y = all_points_for_class[:, 1]
-                las.z = np.zeros_like(all_points_for_class[:, 2]) # Definir Z como 0 ou outro valor padrão, pois a confiança é uma dimensão extra
-                las.confidence = all_points_for_class[:, 2] # Salvar a confiança como dimensão extra
+                las.z = np.zeros_like(all_points_for_class[:, 2])
+                las.confidence = all_points_for_class[:, 2]
 
                 output_las_path = output_dir / f"{output_base_name}{classification_config[class_name]['output_las_suffix']}"
-                las.write(output_las_path)
-                log_message(f"  -> Pontos de confiança para {class_name} salvos em: {output_las_path}", log_file)
+                
+                # Tentar salvar como LAZ, se falhar por falta de backend, salvar como LAS
+                try:
+                    las.write(output_las_path)
+                    log_message(f"  -> Pontos de confiança para {class_name} salvos em: {output_las_path}", log_file)
+                except laspy.errors.LaspyException as e:
+                    if "No LazBackend selected" in str(e):
+                        # Mudar extensão para .las
+                        output_las_path = output_las_path.with_suffix(".las")
+                        log_message(f"  -> Backend LAZ não encontrado. Salvando como LAS sem compressão: {output_las_path}", log_file)
+                        las.write(output_las_path)
+                    else:
+                        raise e
             else:
                 log_message(f"  -> Nenhum ponto de confiança encontrado para {class_name} para salvar em LAS/LAZ.", log_file)
 
@@ -454,4 +460,3 @@ if __name__ == "__main__":
             "Ocorreu um erro. Verifique o log para mais detalhes.", log_file_path
         )
         raise
-DefinirDictComPathsConfidenceERastersDeSaída - Manus

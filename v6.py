@@ -169,7 +169,8 @@ def classify_and_segment(tiff_path, rf_model, tree_points_path, soil_points_path
         # Usar a probabilidade de árvores como imagem de distância (inversa) e máscara
         distance_trees = 1.0 - prob_map_trees
         mask_trees = (prob_map_trees > 0.5).astype(np.uint8) # Limiar de 0.5 para árvores
-        dilated_markers_trees = cv2.dilate(watershed_markers_trees.astype(np.uint32), np.ones((3,3), np.uint8))
+        # OpenCV dilate não suporta uint32, usamos int32 ou float32
+        dilated_markers_trees = cv2.dilate(watershed_markers_trees.astype(np.int32), np.ones((3,3), np.uint8))
         labels_trees = watershed(distance_trees, dilated_markers_trees, mask=mask_trees)
         
         meta.update(dtype='int32')
@@ -201,7 +202,8 @@ def classify_and_segment(tiff_path, rf_model, tree_points_path, soil_points_path
         # Usar a probabilidade de solo como imagem de distância (inversa) e máscara
         distance_soil = 1.0 - prob_map_soil
         mask_soil = (prob_map_soil > 0.5).astype(np.uint8) # Limiar de 0.5 para solo
-        dilated_markers_soil = cv2.dilate(watershed_markers_soil.astype(np.uint32), np.ones((3,3), np.uint8))
+        # OpenCV dilate não suporta uint32, usamos int32 ou float32
+        dilated_markers_soil = cv2.dilate(watershed_markers_soil.astype(np.int32), np.ones((3,3), np.uint8))
         labels_soil = watershed(distance_soil, dilated_markers_soil, mask=mask_soil)
 
         meta.update(dtype='int32')

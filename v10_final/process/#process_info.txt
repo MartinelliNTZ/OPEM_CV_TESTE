@@ -1,0 +1,135 @@
+
+################################################################################
+# NOVA EXECUCAO: 21/05/2026 14:57:07
+# SCRIPT: TREE_v7.PY (CORRIGIDO - v7.1)
+################################################################################
+
+[14:57:07] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final\process\process_info.txt
+[14:57:07] Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final
+[14:57:07] ============================================================
+[14:57:07] ETAPA 1: EXTRACAO DE FEATURES (TREINAMENTO)
+[14:57:07] ============================================================
+[14:57:07] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[14:57:07] Arquivo de pontos de arvores: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[14:57:07] Arquivo de pontos de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[14:57:08] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[14:57:08] Resolucao (GSD): 0.499974 m/pixel
+[14:57:08] CRS: EPSG:31982
+[14:57:08] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[14:57:08] Buffer de treinamento: 1m -> 3 pixels
+[14:57:10] Extraindo 2094 pontos de Arvores...
+[14:57:10]   -> Arvores: 2094 pontos dentro da imagem, 0 fora dos limites
+[14:57:10] Extraindo 2090 pontos de Solo...
+[14:57:10]   -> Solo: 2090 pontos dentro da imagem, 0 fora dos limites
+[14:57:10] 
+Resumo da extracao:
+[14:57:10]   -> Features por pixel: R(1) G(1) B(1) | H(1) S(1) V(1) | ExG(1) = 7 features
+[14:57:10]   -> Total de pixels de arvore para treino: 75,384
+[14:57:10]   -> Total de pixels de solo para treino: 75,240
+[14:57:10]   -> Total de amostras (pixels): 150,624
+[14:57:10]   -> Proporcao arvore/solo: 1.00
+[14:57:10] 
+============================================================
+[14:57:10] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[14:57:10] ============================================================
+[14:57:10] Tamanho do conjunto de treino: 120,499 pixels
+[14:57:10] Tamanho do conjunto de teste: 30,125 pixels
+[14:57:10] Distribuicao treino - Arvore(1): 60434, Solo(0): 60065
+[14:57:10] Distribuicao teste  - Arvore(1): 14950, Solo(0): 15175
+[14:57:10] Treinando Random Forest (n_estimators=100, max_depth=20)...
+[14:57:11] 
+Tempo de treinamento: 0:00:00
+[14:57:11] Acuracia: 0.9283
+[14:57:11] Relatorio de Classificacao:
+              precision    recall  f1-score   support
+
+           0       0.91      0.95      0.93     15175
+           1       0.95      0.91      0.93     14950
+
+    accuracy                           0.93     30125
+   macro avg       0.93      0.93      0.93     30125
+weighted avg       0.93      0.93      0.93     30125
+
+[14:57:11] 
+Importancia das Features (Random Forest):
+[14:57:11]   ExG: 0.2895 (29.0%)
+[14:57:11]   H: 0.1901 (19.0%)
+[14:57:11]   S: 0.1641 (16.4%)
+[14:57:11]   B: 0.1147 (11.5%)
+[14:57:11]   R: 0.1006 (10.1%)
+[14:57:11]   V: 0.0754 (7.5%)
+[14:57:11]   G: 0.0655 (6.6%)
+[14:57:11] 
+Classes do modelo (ordem predict_proba): [0 1]
+[14:57:11] Numero de classes: 2
+[14:57:11] ATENCAO: predict_proba[:, 0] -> classe 0, predict_proba[:, 1] -> classe 1
+[14:57:11] 
+Configuracoes da Pipeline:
+[14:57:11]   -> Tamanho do chunk: 1024x1024 pixels
+[14:57:11]   -> Tamanho do batch de predicao: 200,000 pixels
+[14:57:11]   -> Threshold Watershed: P > 0.3 para inclusao mascara
+[14:57:11]   -> Area minima poligonos: 5 pixels²
+[14:57:11] 
+[FIX] Mapeamento de classes: rf_model.classes_ = [0 1]
+[14:57:11] [FIX] tree_class_idx = 1 (probabilidade de arvore)
+[14:57:11] [FIX] soil_class_idx = 0 (probabilidade de solo)
+[14:57:11] [FIX] prob_map_trees = predict_proba[:, 1]
+[14:57:11] [FIX] prob_map_soil = predict_proba[:, 0]
+[14:57:11] 
+[3.1] Criando marcadores a partir dos pontos de treino...
+[14:57:11]   -> Marcadores de arvore: 2094
+[14:57:11]   -> Marcadores de solo: 2090
+[14:57:11]   -> Total de marcadores: 4184
+[14:57:11]   -> Tempo: 0:00:00
+[14:57:11] 
+[3.2] Classificando a imagem inteira com Random Forest...
+[14:57:11]   -> Dimensoes: 8653x10221 pixels = 88,442,313 pixels
+[14:58:13]   -> Total de chunks processados: 90
+[14:58:13]   -> Tempo de classificacao: 0:01:02
+[14:58:13]   -> Velocidade media: 1.42M pixels/s
+[14:58:13] 
+  -> Estatisticas prob_map_trees:
+[14:58:14]       min=0.0000, max=1.0000, mean=0.8018, std=0.2921
+[14:58:14]   -> Estatisticas prob_map_soil:
+[14:58:14]       min=0.0000, max=1.0000, mean=0.1982, std=0.2921
+[14:58:14] 
+  -> Mapas de probabilidade salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final\process
+[14:58:14]      - prob_map_trees.tif (classe arvore)
+[14:58:14]      - prob_map_soil.tif (classe solo)
+[14:58:14] 
+[3.3] Executando Watershed...
+[14:58:15]   -> Mascara (P > 0.3): 88,442,313 pixels (100.0% da imagem)
+[14:58:41]   -> Rotulos (segmentos) gerados: 3091
+[14:58:41]   -> Valores dos labels: min=1, max=4184
+[14:58:41]   -> Tempo Watershed: 0:00:26
+[14:58:41]   -> Labels salvas em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final\process\labels_final.tif
+[14:58:41] 
+[3.4] Vetorizando resultados (raster -> vetor)...
+[14:58:43] 
+  -> Resultados da vetorizacao:
+[14:58:43]       Arvores: 698 poligonos
+[14:58:43]         Area (px²): min=5.25, max=14492633.88, mean=30825.10, total=21515920.26
+[14:58:43]         Area (m²): min=1.31, max=3622781.63, mean=7705.47, total=5378420.61
+[14:58:43]         Area (ha): min=0.0001, max=362.2782, total=537.84
+[14:58:43]       Solo: 166 poligonos
+[14:58:43]         Area (px²): min=5.25, max=254827.38, mean=3570.21, total=592655.34
+[14:58:43]         Area (m²): min=1.31, max=63700.22, mean=892.46, total=148148.43
+[14:58:43]         Area (ha): min=0.0001, max=6.3700, total=14.81
+[14:58:43]       GeoJSON arvores salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final\arvores_segmentadas.geojson
+[14:58:44]       GeoJSON solo salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v10_final\solo_segmentado.geojson
+[14:58:44]   -> Tempo vetorizacao: 0:00:02
+[14:58:44] 
+  -> Tempo total da Pipeline: 0:01:32
+[14:58:44] 
+============================================================
+[14:58:44] VERIFICACAO DE SANIDADE
+[14:58:44] ============================================================
+[14:58:44] Media prob_map_trees: 0.8018
+[14:58:44] Media prob_map_soil: 0.1982
+[14:58:44] OK: Distribuicao de probabilidades parece correta.
+[14:58:44]   (prob_map_trees ~ 1.0 = arvore, prob_map_soil ~ 0.0 = solo)
+[14:58:44] 
+============================================================
+[14:58:44] PROCESSO CONCLUIDO em 0:01:36
+[14:58:44] Horario de termino: 21/05/2026 14:58:44
+[14:58:44] ============================================================

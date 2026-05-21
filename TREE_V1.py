@@ -12,15 +12,15 @@ import sys
 # =============================================================================
 
 # Caminho para a imagem GeoTIFF de entrada (mosaico de drone)
-INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\INPUT\teste_pilha.tif"
+INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\INPUT\arvo.tif"
 
 # Caminho para o arquivo GeoJSON/Shapefile de pontos de treino (Cenário 2)
 # Deixe como None ou vazio se for usar apenas o Cenário 1
-TRAINING_POINTS_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\INPUT\treino.geojson"
+TRAINING_POINTS_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\INPUT\PONTOS.geojson"
 TRAINING_POINTS_PATH = ""
 
 # Caminho para o diretório de saída dos resultados
-OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\resultados"
+OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\resultados2"
 
 # Nome do arquivo GeoJSON de saída (polígonos das árvores)
 OUTPUT_POLYGONS_FILENAME = "arvores_detectadas.geojson"
@@ -86,15 +86,15 @@ def detect_tree_polygons(
                 for idx, row in training_gdf.iterrows():
                     if row.geometry.geom_type == 'Point':
                         # Converter coordenada geográfica do ponto de treino para pixel
-                        px_x, px_y = src.index(row.geometry.x, row.geometry.y)
+                        row_px, col_px = src.index(row.geometry.x, row.geometry.y)
                         
                         # Amostrar HSV em uma pequena janela ao redor do ponto
                         # Garantir que a janela esteja dentro dos limites da imagem
                         half_window = 5 # Tamanho da janela 11x11 pixels
-                        y_min = max(0, int(px_y) - half_window)
-                        y_max = min(hsv.shape[0], int(px_y) + half_window + 1)
-                        x_min = max(0, int(px_x) - half_window)
-                        x_max = min(hsv.shape[1], int(px_x) + half_window + 1)
+                        y_min = max(0, int(row_px) - half_window)
+                        y_max = min(hsv.shape[0], int(row_px) + half_window + 1)
+                        x_min = max(0, int(col_px) - half_window)
+                        x_max = min(hsv.shape[1], int(col_px) + half_window + 1)
 
                         if y_max > y_min and x_max > x_min:
                             patch = hsv[y_min:y_max, x_min:x_max]
@@ -104,21 +104,20 @@ def detect_tree_polygons(
                                 v_values.extend(patch[:,:,2].flatten())
                 
                 if h_values and s_values and v_values:
-                    # Calcular média e desvio padrão para definir o range HSV
-                    h_mean, h_std = np.mean(h_values), np.std(h_values)
-                    s_mean, s_std = np.mean(s_values), np.std(s_values)
-                    v_mean, v_std = np.mean(v_values), np.std(v_values)
+                    # Calcular percentis para definir um range HSV mais robusto
+                    h_arr = np.array(h_values)
+                    s_arr = np.array(s_values)
+                    v_arr = np.array(v_values)
 
-                    # Definir range HSV dinamicamente (ajustar os multiplicadores conforme necessário)
                     current_hsv_lower = np.array([
-                        max(0, int(h_mean - 2 * h_std)),
-                        max(0, int(s_mean - 2 * s_std)),
-                        max(0, int(v_mean - 2 * v_std))
+                        max(0, int(np.percentile(h_arr, 5) - 10)),
+                        max(0, int(np.percentile(s_arr, 10) - 20)),
+                        max(0, int(np.percentile(v_arr, 10) - 20))
                     ])
                     current_hsv_upper = np.array([
-                        min(179, int(h_mean + 2 * h_std)), # H vai de 0-179 no OpenCV
-                        min(255, int(s_mean + 2 * s_std)),
-                        min(255, int(v_mean + 2 * v_std))
+                        min(179, int(np.percentile(h_arr, 95) + 10)),
+                        min(255, int(np.percentile(s_arr, 90) + 20)),
+                        min(255, int(np.percentile(v_arr, 90) + 20))
                     ])
                     print(f"HSV range refinado: Lower={current_hsv_lower}, Upper={current_hsv_upper}")
                 else:

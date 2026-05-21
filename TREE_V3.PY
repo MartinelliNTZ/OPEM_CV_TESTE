@@ -62,7 +62,7 @@ def resolve_training_points_path(training_points_path):
 
 
 def load_training_points(training_points_path, max_features=None):
-    """Carrega pontos de treino usando pyogrio ou geopandas."""
+    """Carrega pontos de treino usando pyogrio ou geopandas. Se max_features=None, carrega TODOS os pontos."""
     if not training_points_path or not os.path.exists(training_points_path):
         return None
 
@@ -71,10 +71,8 @@ def load_training_points(training_points_path, max_features=None):
 
     if pyogrio is not None:
         try:
-            if max_features is None:
-                gdf = pyogrio.read_dataframe(training_points_path)
-            else:
-                gdf = pyogrio.read_dataframe(training_points_path, max_features=max_features)
+            # Ler TODOS os pontos se max_features for None
+            gdf = pyogrio.read_dataframe(training_points_path)
             print(f"Pontos de treino lidos com pyogrio: {len(gdf)} registros")
         except Exception as e:
             print(f"Falha ao ler pontos de treino com pyogrio: {e}")
@@ -88,9 +86,10 @@ def load_training_points(training_points_path, max_features=None):
             print(f"Falha ao ler pontos de treino com geopandas: {e}")
             return None
 
+    # Se max_features foi especificado, fazer amostragem
     if max_features is not None and len(gdf) > max_features:
-        gdf = gdf.sample(n=max_features, random_state=0)
-        print(f"Amostrando {max_features} pontos de treino para cálculo de ExG")
+        gdf = gdf.sample(n=max_features, random_state=42)
+        print(f"Amostragem de treino reduzida para {max_features} pontos")
 
     return gdf
 
@@ -117,11 +116,12 @@ def detect_tree_polygons_exg(
     default_exg_threshold=70, # Limiar padrão para ExG (ajustável)
     min_area=100,
     max_area=8000,
-    min_circularity=0.4
+    min_circularity=0.4,
+    chunk_size=2000  # Processar em chunks de 2000x2000 pixels para evitar travamento
 ):
     """
     Detecta polígonos de árvores em uma imagem GeoTIFF usando ExG e os salva como GeoJSON.
-    Pode usar pontos de treino para refinar o limiar de ExG.
+    Processa em chunks para imagens grandes. Pode usar pontos de treino para refinar o limiar de ExG.
     """
 
     if not os.path.exists(tiff_path):
@@ -135,105 +135,127 @@ def detect_tree_polygons_exg(
         crs = src.crs
         print(f"Processando imagem: {tiff_path}")
         print(f"CRS detectado: {crs}")
+        print(f"Dimensões: {src.shape[0]}x{src.shape[1]} pixels")
+        print(f"Processamento em chunks de {chunk_size}x{chunk_size}")
 
-        try:
-            img_data = src.read([1, 2, 3])
-        except Exception:
-            print("Aviso: Imagem não possui 3 bandas RGB. Tentando ler como escala de cinza.")
-            img_data = src.read(1)
-            img_data = np.stack([img_data, img_data, img_data])
+        # 3. Determinar limiar de ExG (Cenário 1 ou 2)
+        current_exg_threshold = default_exg_threshold
 
-        img_rgb = np.moveaxis(img_data, 0, -1)
-        img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-
-    # 1. Pré-processamento: Filtro Bilateral para reduzir ruído preservando bordas
-    blur = cv2.bilateralFilter(img_bgr, 9, 75, 75)
-    blur_rgb = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
-
-    # 2. Calcular ExG
-    exg_image = calculate_exg(blur_rgb)
-
-    # 3. Determinar limiar de ExG (Cenário 1 ou 2)
-    current_exg_threshold = default_exg_threshold
-
-    if training_points_path and os.path.exists(training_points_path):
-        print(f"Cenário 2: Refinando limiar de ExG com pontos de treino de {training_points_path}")
-        try:
-            training_gdf = load_training_points(training_points_path, max_features=None)
-            if training_gdf is None or training_gdf.empty:
-                print("Aviso: Arquivo de pontos de treino vazio ou não pôde ser lido. Usando limiar ExG padrão.")
-            else:
-                exg_values = []
-                for idx, row in training_gdf.iterrows():
-                    if row.geometry.geom_type == 'Point':
-                        row_px, col_px = src.index(row.geometry.x, row.geometry.y)
-                        
-                        half_window = 3 # Janela menor para amostragem mais precisa
-                        y_min = max(0, int(row_px) - half_window)
-                        y_max = min(exg_image.shape[0], int(row_px) + half_window + 1)
-                        x_min = max(0, int(col_px) - half_window)
-                        x_max = min(exg_image.shape[1], int(col_px) + half_window + 1)
-
-                        if y_max > y_min and x_max > x_min:
-                            patch = exg_image[y_min:y_max, x_min:x_max]
-                            if patch.size > 0:
-                                # Filtrar valores baixos (solo/sombra) e altos (ruído) na amostra
-                                # Usar percentis para robustez
-                                valid_exg = patch[patch > 0] # Ignorar pixels pretos (fora da imagem ou muito escuros)
-                                if len(valid_exg) > 0:
-                                    exg_values.append(np.percentile(valid_exg, 75)) # Pega o 75º percentil para ser mais robusto ao verde
-                
-                if exg_values:
-                    # Usar a mediana dos 75º percentis para definir o limiar
-                    current_exg_threshold = int(np.median(exg_values) * 0.8) # Multiplicador para ser mais inclusivo
-                    print(f"Limiar ExG refinado: {current_exg_threshold}")
+        if training_points_path and os.path.exists(training_points_path):
+            print(f"Cenário 2: Refinando limiar de ExG com pontos de treino de {training_points_path}")
+            print("(Lendo amostra de treino para calibração...)")
+            try:
+                # Carregar uma AMOSTRA dos pontos para calibrar o limiar ExG
+                training_gdf = load_training_points(training_points_path, max_features=500)
+                if training_gdf is None or training_gdf.empty:
+                    print("Aviso: Arquivo de pontos de treino vazio ou não pôde ser lido. Usando limiar ExG padrão.")
                 else:
-                    print("Aviso: Não foi possível amostrar ExG dos pontos de treino. Usando limiar ExG padrão.")
-        except Exception as e:
-            print(f"Erro ao ler pontos de treino ou refinar ExG: {e}. Usando limiar ExG padrão.")
-    else:
-        print("Cenário 1: Usando limiar ExG padrão.")
+                    exg_values = []
+                    # Processar apenas amostra para calibração, não todos os pontos
+                    for idx, row in training_gdf.iterrows():
+                        if row.geometry.geom_type == 'Point':
+                            try:
+                                row_px, col_px = src.index(row.geometry.x, row.geometry.y)
+                                # Verificar se o ponto está dentro dos limites da imagem
+                                if 0 <= row_px < src.shape[0] and 0 <= col_px < src.shape[1]:
+                                    # Ler apenas um bloco pequeno ao redor do ponto
+                                    window = rasterio.windows.Window(max(0, col_px-5), max(0, row_px-5), 11, 11)
+                                    patch = src.read([1, 2, 3], window=window)
+                                    patch_rgb = np.moveaxis(patch, 0, -1).astype(np.float64)
+                                    # Normalizar para 0-1
+                                    patch_rgb = np.clip(patch_rgb / 255.0, 0, 1)
+                                    r, g, b = patch_rgb[:,:,0], patch_rgb[:,:,1], patch_rgb[:,:,2]
+                                    exg_local = 2*g - r - b
+                                    # Filtrar apenas valores válidos (sem NaN ou infinitos)
+                                    valid_exg = exg_local[(exg_local > 0.05) & np.isfinite(exg_local)].flatten()
+                                    if len(valid_exg) > 2:
+                                        exg_values.append(np.median(valid_exg))  # Usar mediana em vez de percentile
+                            except Exception as e:
+                                continue
+                    
+                    if exg_values:
+                        # Escalar de volta para 0-255
+                        current_exg_threshold = int(np.median(exg_values) * 255 * 0.85)
+                        current_exg_threshold = max(30, min(200, current_exg_threshold))  # Limitar range sensível
+                        print(f"Limiar ExG refinado: {current_exg_threshold} (baseado em amostra)")
+                    else:
+                        print("Aviso: Não foi possível amostrar ExG dos pontos de treino. Usando limiar ExG padrão.")
+            except Exception as e:
+                print(f"Erro ao ler pontos de treino ou refinar ExG: {e}. Usando limiar ExG padrão.")
+        else:
+            print("Cenário 1: Usando limiar ExG padrão.")
 
-    # 4. Segmentação binária usando o limiar de ExG
-    _, mask = cv2.threshold(exg_image, current_exg_threshold, 255, cv2.THRESH_BINARY)
+        # Processar em chunks para evitar carregar tudo na memória
+        polygons = []
+        height, width = src.shape
 
-    # 5. Operações morfológicas para limpar e separar objetos
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel) # Remove pequenos ruídos
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel) # Fecha pequenos buracos
+        for row_start in range(0, height, chunk_size):
+            row_end = min(row_start + chunk_size, height)
+            for col_start in range(0, width, chunk_size):
+                col_end = min(col_start + chunk_size, width)
+                
+                print(f"Processando chunk: linha {row_start}-{row_end}, coluna {col_start}-{col_end}")
+                
+                # Ler chunk de 3 bandas
+                window = rasterio.windows.Window(col_start, row_start, col_end - col_start, row_end - row_start)
+                chunk_data = src.read([1, 2, 3], window=window)
+                
+                chunk_rgb = np.moveaxis(chunk_data, 0, -1).astype(np.float64)
+                # Normalizar para 0-1 e cllipar
+                chunk_rgb = np.clip(chunk_rgb / 255.0, 0, 1)
+                
+                chunk_bgr = cv2.cvtColor((chunk_rgb * 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
+                
+                # 1. Pré-processamento: Filtro Bilateral
+                blur = cv2.bilateralFilter(chunk_bgr, 9, 75, 75)
+                blur_rgb = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
+                
+                # 2. Calcular ExG
+                chunk_exg = calculate_exg(blur_rgb)
+                
+                # 4. Segmentação binária usando o limiar de ExG
+                _, mask = cv2.threshold(chunk_exg, current_exg_threshold, 255, cv2.THRESH_BINARY)
+                
+                # 5. Operações morfológicas
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                
+                # 6. Encontrar contornos no chunk
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                # 7. Converter contornos para coordenadas geográficas
+                for cnt in contours:
+                    area = cv2.contourArea(cnt)
+                    perimeter = cv2.arcLength(cnt, True)
+                    
+                    if perimeter == 0:
+                        continue
+                    
+                    circularity = 4 * np.pi * area / (perimeter * perimeter)
+                    
+                    if min_area < area < max_area and circularity > min_circularity:
+                        geo_coords = []
+                        for point in cnt.reshape(-1, 2):
+                            # Ponto relativo ao chunk + offset do chunk
+                            px = col_start + point[0]
+                            py = row_start + point[1]
+                            lon, lat = rasterio.transform.xy(transform, py, px)
+                            geo_coords.append((lon, lat))
+                        
+                        if len(geo_coords) >= 3:
+                            try:
+                                polygons.append(Polygon(geo_coords))
+                            except Exception as e:
+                                pass
 
-    # 6. Encontrar contornos
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    polygons = []
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        perimeter = cv2.arcLength(cnt, True)
-
-        if perimeter == 0: continue
-
-        circularity = 4 * np.pi * area / (perimeter * perimeter)
-
-        # 7. Filtrar contornos por área e circularidade
-        if min_area < area < max_area and circularity > min_circularity:
-            geo_coords = []
-            for point in cnt.reshape(-1, 2):
-                lon, lat = rasterio.transform.xy(transform, point[1], point[0])
-                geo_coords.append((lon, lat))
-            
-            if len(geo_coords) >= 3:
-                try:
-                    polygons.append(Polygon(geo_coords))
-                except Exception as e:
-                    print(f"Aviso: Não foi possível criar polígono válido para um contorno: {e}")
-
-    if polygons:
-        gdf = gpd.GeoDataFrame(geometry=polygons, crs=crs)
-        final_output_path = os.path.join(OUTPUT_DIR, output_geojson_path)
-        gdf.to_file(final_output_path, driver='GeoJSON')
-        print(f"Detecção concluída: {len(polygons)} polígonos de árvores salvos em {final_output_path}")
-    else:
-        print("Nenhum polígono de árvore detectado com os parâmetros atuais.")
+        if polygons:
+            gdf = gpd.GeoDataFrame(geometry=polygons, crs=crs)
+            final_output_path = os.path.join(OUTPUT_DIR, output_geojson_path)
+            gdf.to_file(final_output_path, driver='GeoJSON')
+            print(f"Detecção concluída: {len(polygons)} polígonos de árvores salvos em {final_output_path}")
+        else:
+            print("Nenhum polígono de árvore detectado com os parâmetros atuais.")
 
 # =============================================================================
 # EXECUÇÃO PRINCIPAL

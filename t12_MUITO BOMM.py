@@ -18,7 +18,7 @@ from tqdm import tqdm
 INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif"
 MDS_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif"
 BUFFER_SIZE_METERS = 1
-OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v11_final__"
+OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v12"
 EPSG = 31982
 
 # Novo dicionário de configuração para classes

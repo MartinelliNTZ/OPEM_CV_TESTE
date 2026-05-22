@@ -1,0 +1,158 @@
+[14:30:41] ============================================================
+[14:30:41] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[14:30:41] ============================================================
+[14:31:01] Extraindo 2094 pontos de floresta...
+[14:31:01] Extraindo 2090 pontos de solo...
+[14:31:02] 
+============================================================
+[14:31:02] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[14:31:02] ============================================================
+[14:31:02] Acuracia: 0.9540
+[14:31:02] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[14:31:03] 
+Importancia das Features:
+[14:31:03]   ExGR: 0.1596
+[14:31:03]   ExR: 0.1181
+[14:31:03]   ExG: 0.1176
+[14:31:03]   ExB: 0.0901
+[14:31:03]   Variance: 0.0886
+[14:31:03]   H: 0.0782
+[14:31:03]   Sobel: 0.0619
+[14:31:03]   S: 0.0612
+[14:31:03]   B: 0.0590
+[14:31:03]   R: 0.0553
+[14:31:03]   G: 0.0401
+[14:31:03]   V: 0.0389
+[14:31:03]   Slope: 0.0158
+[14:31:03]   MDS: 0.0154
+[14:31:03] 
+============================================================
+[14:31:03] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[14:31:03] ============================================================
+[14:32:18] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_floresta.tif
+[14:32:18] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_solo.tif
+[14:32:18] Iniciando filtragem espacial para a classe solo...
+[14:32:18] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[14:32:18] Área mínima para um grupo de pixels: 10 pixels = 2.50 m²
+[14:32:22] Total de pontos para filtragem: 1192630
+[14:32:22] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[14:32:32] Erro: 'GeoSeries' object has no attribute 'dissolve'
+[14:33:40] ============================================================
+[14:33:40] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[14:33:40] ============================================================
+[14:34:01] Extraindo 2094 pontos de floresta...
+[14:34:01] Extraindo 2090 pontos de solo...
+[14:34:02] 
+============================================================
+[14:34:02] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[14:34:02] ============================================================
+[14:34:03] Acuracia: 0.9540
+[14:34:03] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[14:34:03] 
+Importancia das Features:
+[14:34:03]   ExGR: 0.1596
+[14:34:03]   ExR: 0.1181
+[14:34:03]   ExG: 0.1176
+[14:34:03]   ExB: 0.0901
+[14:34:03]   Variance: 0.0886
+[14:34:03]   H: 0.0782
+[14:34:03]   Sobel: 0.0619
+[14:34:03]   S: 0.0612
+[14:34:03]   B: 0.0590
+[14:34:03]   R: 0.0553
+[14:34:03]   G: 0.0401
+[14:34:03]   V: 0.0389
+[14:34:03]   Slope: 0.0158
+[14:34:03]   MDS: 0.0154
+[14:34:03] 
+============================================================
+[14:34:03] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[14:34:03] ============================================================
+[14:34:05] ============================================================
+[14:34:05] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[14:34:05] ============================================================
+[14:34:39] Extraindo 2094 pontos de floresta...
+[14:34:39] Extraindo 2090 pontos de solo...
+[14:34:41] 
+============================================================
+[14:34:41] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[14:34:41] ============================================================
+[14:34:42] Acuracia: 0.9540
+[14:34:42] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[14:34:42] 
+Importancia das Features:
+[14:34:42]   ExGR: 0.1596
+[14:34:42]   ExR: 0.1181
+[14:34:42]   ExG: 0.1176
+[14:34:42]   ExB: 0.0901
+[14:34:42]   Variance: 0.0886
+[14:34:42]   H: 0.0782
+[14:34:42]   Sobel: 0.0619
+[14:34:42]   S: 0.0612
+[14:34:42]   B: 0.0590
+[14:34:42]   R: 0.0553
+[14:34:42]   G: 0.0401
+[14:34:42]   V: 0.0389
+[14:34:42]   Slope: 0.0158
+[14:34:42]   MDS: 0.0154
+[14:34:42] 
+============================================================
+[14:34:42] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[14:34:42] ============================================================
+[14:35:51] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_floresta.tif
+[14:35:52] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_solo.tif
+[14:35:52] Iniciando filtragem espacial para a classe solo...
+[14:35:52] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[14:35:52] Área mínima para um grupo de pixels: 10 pixels = 2.50 m²
+[14:35:59] Total de pontos para filtragem: 1192630
+[14:35:59] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[14:36:27] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_floresta.tif
+[14:36:27] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_prob_solo.tif
+[14:36:27] Iniciando filtragem espacial para a classe solo...
+[14:36:27] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[14:36:27] Área mínima para um grupo de pixels: 10 pixels = 2.50 m²
+[14:36:31] Total de pontos para filtragem: 1192630
+[14:36:31] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[14:42:04] Polígonos dissolvidos gerados: 1
+[14:42:04] Filtrando polígonos com área menor que 2.50 m²...
+[14:42:04] Polígonos restantes após filtragem: 1
+[14:42:06] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\process\filtered_groups_solo.shp
+[14:42:06] Filtrando pontos originais com base nos polígonos resultantes...
+[14:42:11] Pontos restantes após filtragem: 1192630
+[14:42:12] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_solo_confidence.laz
+[14:42:13] Processo concluído com sucesso.
+[14:42:15] Polígonos dissolvidos gerados: 1
+[14:42:15] Filtrando polígonos com área menor que 2.50 m²...
+[14:42:15] Polígonos restantes após filtragem: 1
+[14:42:17] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\process\filtered_groups_solo.shp
+[14:42:17] Filtrando pontos originais com base nos polígonos resultantes...
+[14:42:22] Pontos restantes após filtragem: 1192630
+[14:42:24] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15\Imaru2_solo_confidence.laz
+[14:42:24] Processo concluído com sucesso.

@@ -1,0 +1,130 @@
+
+################################################################################
+# EXECUCAO: 21/05/2026 18:07:25
+################################################################################
+
+[18:07:25] Log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_process_info.txt
+[18:07:25] Imagem: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[18:07:25] MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[18:07:25] SOLO_PROB_THRESHOLD: 0.55
+[18:07:25] MORPH_KERNEL_SIZE: 5
+[18:07:25] OUTLIER_SEARCH_RADIUS_M: 4.0m
+[18:07:25] Z_STD_THRESH: 1.5
+[18:07:25] ============================================================
+[18:07:25] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[18:07:25] ============================================================
+[18:07:25] Features utilizadas (12): ['R', 'G', 'B', 'H', 'S', 'V', 'ExG', 'ExR', 'ExB', 'ExGR', 'Var', 'Grad']
+[18:07:25] Dimensoes: 8653x10221px | GSD: 0.499974m | Buffer: 0.85m = 2px
+[18:07:25] CRS: EPSG:31982
+[18:07:25] Banda Alpha detectada (banda 4)
+
+################################################################################
+# EXECUCAO: 21/05/2026 18:07:49
+################################################################################
+
+[18:07:49] Log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_process_info.txt
+[18:07:49] Imagem: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[18:07:49] MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[18:07:49] SOLO_PROB_THRESHOLD: 0.55
+[18:07:49] MORPH_KERNEL_SIZE: 5
+[18:07:49] OUTLIER_SEARCH_RADIUS_M: 4.0m
+[18:07:49] Z_STD_THRESH: 1.5
+[18:07:49] ============================================================
+[18:07:49] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[18:07:49] ============================================================
+[18:07:49] Features utilizadas (12): ['R', 'G', 'B', 'H', 'S', 'V', 'ExG', 'ExR', 'ExB', 'ExGR', 'Var', 'Grad']
+[18:07:49] Dimensoes: 8653x10221px | GSD: 0.499974m | Buffer: 0.85m = 2px
+[18:07:49] CRS: EPSG:31982
+[18:07:49] Banda Alpha detectada (banda 4)
+[18:07:50] Extraindo 2094 pontos de [floresta] (label=1)...
+[18:07:50]   -> floresta: 2094 pontos validos, 0 fora dos limites
+[18:07:50] Extraindo 2090 pontos de [solo] (label=0)...
+[18:07:50]   -> solo: 2090 pontos validos, 0 fora dos limites
+[18:07:50]   -> Total pixels [floresta]: 33,504
+[18:07:50]   -> Total pixels [solo]: 33,440
+[18:07:50]   -> Total geral: 66,944 pixels de treino
+[18:07:51] 
+============================================================
+[18:07:51] ETAPA 2: TREINAMENTO (Random Forest)
+[18:07:51] ============================================================
+[18:07:51] Treino: 53,555 | Teste: 13,389
+[18:07:51]   Classe 0 -> treino: 26,727 | teste: 6,713
+[18:07:51]   Classe 1 -> treino: 26,828 | teste: 6,676
+[18:07:51] Treinando Random Forest (n_estimators=250, max_depth=20)...
+[18:07:52] Tempo de treinamento: 0:00:01
+[18:07:52] Acuracia: 0.9163
+[18:07:52] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.89      0.95      0.92      6713
+           1       0.95      0.88      0.91      6676
+
+    accuracy                           0.92     13389
+   macro avg       0.92      0.92      0.92     13389
+weighted avg       0.92      0.92      0.92     13389
+
+[18:07:52] Classes do modelo (predict_proba order): [0 1]
+[18:07:52] Importancia das features:
+[18:07:52]   ExGR: 0.1624 (16.2%)
+[18:07:52]   ExG: 0.1401 (14.0%)
+[18:07:52]   ExR: 0.1213 (12.1%)
+[18:07:52]   H: 0.1009 (10.1%)
+[18:07:52]   ExB: 0.1002 (10.0%)
+[18:07:52]   Var: 0.0873 (8.7%)
+[18:07:52]   S: 0.0649 (6.5%)
+[18:07:52]   B: 0.0643 (6.4%)
+[18:07:52]   R: 0.0491 (4.9%)
+[18:07:52]   G: 0.0408 (4.1%)
+[18:07:52]   V: 0.0404 (4.0%)
+[18:07:52]   Grad: 0.0283 (2.8%)
+[18:07:52] 
+============================================================
+[18:07:52] ETAPA 3: CLASSIFICACAO + MAPA + PONTOS LAZ
+[18:07:52] ============================================================
+[18:07:52]   threshold P(solo): >= 0.5500
+[18:07:52]   morfologia opening kernel: 5x5
+[18:07:52]   solo_class_idx (P(solo) em predict_proba): 0
+[18:07:52]   rf_model.classes_: [0 1]
+[18:07:52]   Imagem: 8653x10221px | 90 chunks de 1024px
+[18:10:24]   Raster P(solo) salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_prob_solo.tif
+[18:10:24]   (0=mata, 1=solo, NaN=nodata)
+[18:10:24]   Pixels com P(solo) >= 0.55: 18,643,693
+[18:10:26]   Apos opening (kernel 5x5):
+[18:10:26]     Pixels removidos (ilhas de solo em mata): 13,989,548
+[18:10:26]     Pixels de solo restantes: 4,654,145
+[18:10:27]   Total de pontos coletados para LAZ: 4,654,145
+[18:10:28]   LAZ de solo salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_solo_confidence.laz
+[18:10:28]   Tempo total etapa 3: 0:02:35
+[18:10:28] EPSG utilizado: EPSG:31982
+[18:10:28] 
+============================================================
+[18:10:28] ETAPA 4: EXTRACAO DE Z DO MDS
+[18:10:28] ============================================================
+[18:10:28]   Pontos no LAZ: 4,654,145
+[18:10:29]   MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif | shape: (23419, 19825) | res: 0.2182m
+[18:10:29]   Dentro do MDS: 4,654,145 | Fora: 0
+[18:10:36]   Z extraidos: 4,653,677 | min=183.14m | max=234.45m | medio=202.75m
+[18:10:36]   Tempo: 0:00:07
+[18:10:36] 
+============================================================
+[18:10:36] ETAPA 5: FILTRO OUTLIER Z (PONTOS LAZ)
+[18:10:36] ============================================================
+[18:10:36]   Raio de busca: 4.0m | Threshold: mediana + 1.5*sigma
+[18:10:36]   Pontos antes do filtro: 4,653,677
+[18:15:21]   Pontos removidos (outlier Z): 200,065 (4.3%)
+[18:15:21]   Pontos restantes: 4,453,612
+[18:15:21]   Tempo: 0:04:45
+[18:15:22] 
+============================================================
+[18:15:22] ETAPA 6: GERACAO DO MDT POR IDW + KDTREE
+[18:15:22] ============================================================
+[18:15:22]   Resolucao: 1.0m | Dimensoes: 4327x5111px
+[18:15:22]   Pontos de entrada: 4,453,612
+[18:15:22]   Vizinhos IDW: 12 | Potencia: 2.0
+[18:16:07]   MDT Z: min=183.49m | max=234.31m | medio=205.60m | std=7.74m
+[18:16:07]   Pixels preenchidos: 22,115,297 / 22,115,297 (100.0%)
+[18:16:07]   MDT gerado: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_MDT.tif
+[18:16:07]   Tempo total IDW: 0:00:45
+[18:16:07] 
+CONCLUIDO em 0:08:18
+[18:16:07] MDT final: D:\TESTES_PYTHON\OPEM_CV_TESTE\v12_final\Imaru2_MDT.tif

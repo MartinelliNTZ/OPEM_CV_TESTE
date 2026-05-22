@@ -1,0 +1,143 @@
+
+################################################################################
+# EXECUCAO COMPLETA (RF + MDT): 22/05/2026 13:03:07
+################################################################################
+
+[13:03:07] Arquivo de log: D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_process_info.txt
+[13:03:07] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[13:03:07] MDS de referencia: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[13:03:07] Pontos de treino de floresta: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\floresta_pts.shp
+[13:03:07] Pontos de treino de solo: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp
+[13:03:07] ============================================================
+[13:03:08] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[13:03:08] ============================================================
+[13:03:08] Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[13:03:08] Dimensoes da imagem: 8653 x 10221 pixels (4 bandas)
+[13:03:08] Resolucao (GSD): 0.499974 m/pixel
+[13:03:08] CRS: EPSG:31982
+[13:03:08] Extent (bounds): left=554202.12, bottom=9075239.14, right=558528.39, top=9080349.82
+[13:03:08] Buffer de treinamento: 0.85m -> 2 pixels
+[13:03:08] Usando bandas 1(R), 2(G), 3(B) para features
+[13:03:10] Extraindo 2094 pontos de floresta...
+[13:03:10]   -> floresta: 2094 pontos dentro da imagem, 0 fora dos limites
+[13:03:10] Extraindo 2090 pontos de solo...
+[13:03:10]   -> solo: 2090 pontos dentro da imagem, 0 fora dos limites
+[13:03:10] 
+Resumo da extracao:
+[13:03:10]   -> Features por pixel: R(1) G(1) B(1) | H(1) S(1) V(1) | ExG(1) = 7 features
+[13:03:10]   -> Total de pixels de floresta para treino: 33,504
+[13:03:10]   -> Total de pixels de solo para treino: 33,440
+[13:03:10]   -> Total de amostras (pixels): 66,944
+[13:03:10] 
+============================================================
+[13:03:10] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[13:03:10] ============================================================
+[13:03:10] Tamanho do conjunto de treino: 53,555 pixels
+[13:03:10] Tamanho do conjunto de teste: 13,389 pixels
+[13:03:10] Distribuicao treino - Classe 0: 26727
+[13:03:10] Distribuicao teste  - Classe 0: 6713
+[13:03:10] Distribuicao treino - Classe 1: 26828
+[13:03:10] Distribuicao teste  - Classe 1: 6676
+[13:03:10] Treinando Random Forest (n_estimators=100, max_depth=20)...
+[13:03:11] 
+Tempo de treinamento: 0:00:00
+[13:03:11] Acuracia: 0.9186
+[13:03:11] Relatorio de Classificacao:
+              precision    recall  f1-score   support
+
+           0       0.89      0.95      0.92      6713
+           1       0.95      0.88      0.92      6676
+
+    accuracy                           0.92     13389
+   macro avg       0.92      0.92      0.92     13389
+weighted avg       0.92      0.92      0.92     13389
+
+[13:03:11] 
+Importancia das Features (Random Forest):
+[13:03:11]   ExG: 0.2694 (26.9%)
+[13:03:11]   H: 0.1862 (18.6%)
+[13:03:11]   S: 0.1705 (17.1%)
+[13:03:11]   B: 0.1315 (13.1%)
+[13:03:11]   R: 0.1009 (10.1%)
+[13:03:11]   V: 0.0722 (7.2%)
+[13:03:11]   G: 0.0693 (6.9%)
+[13:03:11] 
+Classes do modelo (ordem predict_proba): [0 1]
+[13:03:11] Numero de classes: 2
+[13:03:11] 
+============================================================
+[13:03:11] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E PONTOS DE CONFIDENCIA
+[13:03:11] ============================================================
+[13:03:11] 
+Configuracoes de Geracao:
+[13:03:11]   -> Imagem de entrada: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif
+[13:03:11]   -> Diretorio de saida: D:\TESTES_PYTHON\OPEM_CV_TESTE\v13
+[13:03:11]   -> Nome base dos arquivos de saida: Imaru2
+[13:03:11]   -> Tamanho do chunk: 1024x1024 pixels
+[13:03:11]   -> Tamanho do batch de predicao: 200,000 pixels
+[13:03:11] 
+[INFO] Mapeamento de classes: rf_model.classes_ = [0 1]
+[13:03:11] [INFO] floresta_class_idx = 1 (probabilidade de floresta, classe 1)
+[13:03:11] [INFO] solo_class_idx = 0 (probabilidade de solo, classe 0)
+[13:03:11] [INFO] Banda Alpha detectada (banda 4). Usando Alpha < 250 como NoData.
+[13:03:11] 
+Classificando a imagem inteira com Random Forest...
+[13:03:11]   -> Dimensoes: 8653x10221 pixels = 88,442,313 pixels
+[13:04:17]   -> Tempo de classificacao e coleta de pontos: 0:01:06
+[13:04:17]   -> Velocidade media: 1.33M pixels/s
+[13:04:17]      - D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_prob_floresta.tif (P de ser floresta)
+[13:04:17]      - D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_prob_solo.tif (P de ser solo)
+[13:04:18]   -> Pontos de confiança para solo salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_solo_confidence.laz
+[13:04:18] 
+  -> Tempo total de geracao: 0:01:06
+[13:04:18] 
+============================================================
+[13:04:18] ETAPA: DETERMINACAO DO EPSG PARA MDT
+[13:04:18] ============================================================
+[13:04:18]    -> EPSG utilizado: EPSG:31982
+[13:04:18] 
+============================================================
+[13:04:18] ETAPA 4: EXTRACAO DE Z DO MDS PARA OS PONTOS LAS
+[13:04:18] ============================================================
+[13:04:18]    -> LAS: D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_solo_confidence.laz
+[13:04:18]    -> Pontos: 775,882
+[13:04:18]    -> Coordenadas X/Y carregadas: 775,882
+[13:04:18]    -> MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[13:04:18]    -> MDS shape: (23419, 19825)
+[13:04:18]    -> MDS CRS: EPSG:31982
+[13:04:18]    -> MDS resolucao: 0.2182m
+[13:04:18]    -> Pontos dentro do MDS: 775,882
+[13:04:18]    -> Pontos fora do MDS: 0
+[13:04:21]    -> Z extraidos com sucesso: 775,863
+[13:04:21]    -> Z min: 183.79m
+[13:04:21]    -> Z max: 232.18m
+[13:04:21]    -> Z medio: 209.03m
+[13:04:21]    -> Tempo: 0:00:03
+[13:04:21] 
+============================================================
+[13:04:21] ETAPA 5: GERACAO DO MDT POR IDW + KDTREE
+[13:04:21] ============================================================
+[13:04:21]    -> Resolucao do MDT: 1.0m
+[13:04:21]    -> Bounds: left=554202.12, bottom=9075239.25, right=558528.39, top=9080349.82
+[13:04:21]    -> Dimensoes raster: 4327 x 5111 pixels
+[13:04:21]    -> Total de pixels: 22,115,297
+[13:04:21]    -> Pontos de entrada: 775,863
+[13:04:21]    -> Vizinhos IDW: 12
+[13:04:21]    -> Potencia IDW: 2.0
+[13:04:21] 
+   Construindo KDTree...
+[13:04:21]    -> KDTree construida em 0:00:00
+[13:04:21] 
+   Processando IDW por chunks de 256x256...
+[13:04:31] 
+   -> MDT gerado em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v13\Imaru2_MDT.tif
+[13:04:31]    -> Tempo total IDW: 0:00:10
+[13:04:32]    -> MDT Z min: 183.81m
+[13:04:32]    -> MDT Z max: 231.57m
+[13:04:32]    -> MDT Z medio: 203.99m
+[13:04:32]    -> MDT STD: 7.42m
+[13:04:32]    -> Pixels preenchidos: 22,115,297 de 22,115,297 (100.0%)
+[13:04:32] 
+============================================================
+[13:04:32] PROCESSO COMPLETO (RF + MDT) CONCLUIDO em 0:01:24
+[13:04:32] ============================================================

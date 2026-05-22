@@ -216,3 +216,178 @@ Pipeline completo! MDT gerado: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_MDT_ID
 [18:12:02] ============================================================
 [18:12:02] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
 [18:12:02] ============================================================
+[18:12:12] ============================================================
+[18:12:12] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[18:12:12] ============================================================
+[18:12:52] Extraindo 2094 pontos de floresta...
+[18:12:52] Extraindo 2090 pontos de solo...
+[18:12:54] 
+============================================================
+[18:12:54] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[18:12:54] ============================================================
+[18:12:56] Acuracia: 0.9540
+[18:12:56] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[18:12:56] 
+Importancia das Features:
+[18:12:56]   ExGR: 0.1596
+[18:12:56]   ExR: 0.1181
+[18:12:56]   ExG: 0.1176
+[18:12:56]   ExB: 0.0901
+[18:12:56]   Variance: 0.0886
+[18:12:56]   H: 0.0782
+[18:12:56]   Sobel: 0.0619
+[18:12:56]   S: 0.0612
+[18:12:56]   B: 0.0590
+[18:12:56]   R: 0.0553
+[18:12:56]   G: 0.0401
+[18:12:56]   V: 0.0389
+[18:12:56]   Slope: 0.0158
+[18:12:56]   MDS: 0.0154
+[18:12:56] 
+============================================================
+[18:12:56] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[18:12:56] ============================================================
+[18:15:13] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
+[18:15:13] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
+[18:15:13] Iniciando filtragem espacial para a classe solo...
+[18:15:13] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[18:15:13] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
+[18:15:21] Total de pontos para filtragem: 1192630
+[18:15:21] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[18:15:34] Buffers aplicados. Iniciando dissolução...
+[18:34:18] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
+[18:34:19] Polígonos dissolvidos gerados: 106798
+[18:34:19] Filtrando polígonos com área menor que 12.50 m²...
+[18:34:19] Polígonos restantes após filtragem: 4682
+[18:34:20] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[18:34:20] Filtrando pontos originais com base nos polígonos resultantes...
+[18:34:23] Pontos restantes após filtragem: 989704
+[18:34:26] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[18:34:27] 
+============================================================
+[18:34:27] ETAPA 4: EXTRACAO DE Z DO MDS PARA OS PONTOS LAS
+[18:34:27] ============================================================
+[18:34:27]    -> LAS: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[18:34:27]    -> Pontos: 989,704
+[18:34:27]    -> Coordenadas X/Y carregadas: 989,704
+[18:34:27]    -> MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[18:34:27]    -> MDS shape: (23419, 19825)
+[18:34:27]    -> MDS CRS: EPSG:31982
+[18:34:27]    -> MDS resolucao: 0.2182m
+[18:34:27]    -> Pontos dentro do MDS: 989,704
+[18:34:27]    -> Pontos fora do MDS: 0
+[18:34:33]    -> Z extraidos com sucesso: 989,704
+[18:34:33]    -> Z min: 185.09m
+[18:34:33]    -> Z max: 231.01m
+[18:34:33]    -> Z medio: 209.88m
+[18:34:33]    -> Tempo: 0:00:06
+[18:34:34] 
+============================================================
+[18:34:34] ETAPA 5: GERACAO DO MDT POR IDW + KDTREE (suavizado)
+[18:34:34] ============================================================
+[18:34:34]    -> Resolucao do MDT: 0.5m
+[18:34:34]    -> Bounds: left=554402.85, bottom=9075526.90, right=558273.15, top=9080319.07
+[18:34:34]    -> Dimensoes raster: 7741 x 9585 pixels
+[18:34:34]    -> Total de pixels: 74,197,485
+[18:34:34]    -> Pontos de entrada: 989,704
+[18:34:34]    -> Vizinhos IDW: 24
+[18:34:34]    -> Potencia IDW: 2.0
+[18:34:34]    -> Gaussian sigma: 1.5
+[18:34:34] 
+   Removendo outliers por Z-score...
+[18:34:34] 
+   Construindo KDTree...
+[18:34:34]    -> KDTree construida em 0:00:00
+[18:34:34] 
+   Processando IDW por chunks de 512x512...
+[18:36:23] 
+   Aplicando suavizacao Gaussiana (sigma=1.5)...
+[18:36:27]    -> Suavizacao concluida em 0:00:04
+[18:36:29] 
+   -> MDT gerado em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_MDT_IDW.tif
+[18:36:29]    -> Tempo total IDW: 0:01:55
+[18:36:30]    -> MDT Z min:  185.13m
+[18:36:30]    -> MDT Z max:  229.95m
+[18:36:31]    -> MDT Z medio:203.90m
+[18:36:31]    -> MDT STD:    7.73m
+[18:36:31]    -> Pixels preenchidos: 74,197,485 de 74,197,485 (100.0%)
+[18:36:32] Usando shape da classe 'solo' para Etapa 6: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[18:36:32] 
+============================================================
+[18:36:32] ETAPA 6: FILTRAGEM AGRESSIVA DO SHAPE (POS-MDT)
+[18:36:32] ============================================================
+[18:36:39] Shape carregado: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[18:36:39] Total de features: 4682
+[18:36:39] GSD: 0.5000m
+[18:36:39] GROUP_PIXELS_SHP: 250 pixels = 50 * 5
+[18:36:39] Area minima para buracos (GROUP_PIXELS_SHP * gsd²): 62.49 m²
+[18:36:39] Area maxima para feicoes (GROUP_PIXELS_SHP * 5 * gsd²): 312.47 m²
+[18:36:40] Total de buracos removidos: 35721
+[18:36:40] Features apos remocao de buracos: 4682
+[18:36:40] Areas (min/mean/max): 12.50 / 111.22 / 242004.75 m²
+[18:36:40] Features apos filtro de area maxima: 4585 (removidas 97 feicoes com area > 312.47 m²)
+[18:36:40] Areas finais (min/mean/max): 12.50 / 35.29 / 307.53 m²
+[18:36:40] Shape filtrado salvo em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_aggressive.shp
+[18:36:41] Shape sem buracos pequenos salvo em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_no_holes.shp
+[18:36:41] Tempo Etapa 6: 0:00:09
+[18:36:41] 
+Pipeline completo! MDT: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_MDT_IDW.tif
+[18:36:41] Shape filtrado (agressivo): D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_aggressive.shp
+[18:36:41] Processo concluído com sucesso.
+[18:47:53] ============================================================
+[18:47:53] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[18:47:53] ============================================================
+[18:48:32] Extraindo 2094 pontos de floresta...
+[18:48:32] Extraindo 2090 pontos de solo...
+[18:48:34] 
+============================================================
+[18:48:34] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[18:48:34] ============================================================
+[18:48:35] Acuracia: 0.9540
+[18:48:35] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[18:48:35] 
+Importancia das Features:
+[18:48:35]   ExGR: 0.1596
+[18:48:35]   ExR: 0.1181
+[18:48:35]   ExG: 0.1176
+[18:48:35]   ExB: 0.0901
+[18:48:35]   Variance: 0.0886
+[18:48:35]   H: 0.0782
+[18:48:35]   Sobel: 0.0619
+[18:48:35]   S: 0.0612
+[18:48:35]   B: 0.0590
+[18:48:35]   R: 0.0553
+[18:48:35]   G: 0.0401
+[18:48:35]   V: 0.0389
+[18:48:35]   Slope: 0.0158
+[18:48:35]   MDS: 0.0154
+[18:48:35] 
+============================================================
+[18:48:35] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[18:48:35] ============================================================
+[18:50:56] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
+[18:50:56] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
+[18:50:56] Iniciando filtragem espacial para a classe solo...
+[18:50:56] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[18:50:56] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
+[18:51:02] Total de pontos para filtragem: 1192630
+[18:51:02] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[18:51:14] Buffers aplicados. Iniciando dissolução...

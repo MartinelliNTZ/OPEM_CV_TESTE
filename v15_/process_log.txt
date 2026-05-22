@@ -391,3 +391,33 @@ Importancia das Features:
 [18:51:02] Total de pontos para filtragem: 1192630
 [18:51:02] Aplicando buffer de 0.75m e dissolvendo polígonos...
 [18:51:14] Buffers aplicados. Iniciando dissolução...
+[19:02:05] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
+[19:02:06] Polígonos dissolvidos gerados: 106798
+[19:02:06] Filtrando polígonos com área menor que 12.50 m²...
+[19:02:06] Polígonos restantes após filtragem: 4682
+[19:02:07] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[19:02:07] Filtrando pontos originais com base nos polígonos resultantes...
+[19:02:09] Pontos restantes após filtragem: 989704
+[19:02:12] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[19:02:13] 
+============================================================
+[19:02:13] ETAPA 4: EXTRACAO DE Z DO MDS PARA OS PONTOS LAS
+[19:02:13] ============================================================
+[19:02:13]    -> LAS: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[19:02:13]    -> Pontos: 989,704
+[19:02:13]    -> Coordenadas X/Y carregadas: 989,704
+[19:02:13]    -> MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[19:02:13]    -> MDS shape: (23419, 19825)
+[19:02:13]    -> MDS CRS: EPSG:31982
+[19:02:13]    -> MDS resolucao: 0.2182m
+[19:02:13]    -> Pontos dentro do MDS: 989,704
+[19:02:13]    -> Pontos fora do MDS: 0
+[19:02:19]    -> Z extraidos com sucesso: 989,704
+[19:02:19]    -> Z min: 185.09m
+[19:02:19]    -> Z max: 231.01m
+[19:02:19]    -> Z medio: 209.88m
+[19:02:19]    -> Tempo: 0:00:05
+[19:02:19] Erro: name 'generate_mdt_idw' is not defined
+[19:10:42] ============================================================
+[19:10:42] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[19:10:42] ============================================================

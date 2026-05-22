@@ -737,9 +737,9 @@ if __name__ == "__main__":
             # ETAPA 5: Gerar MDT por IDW
             # Usar bounds do LAS para definir a extensao do MDT
             bounds = (xs.min(), ys.min(), xs.max(), ys.max())
-            mdt_path = generate_mdt_idw(
+            mdt_path = generate_mdt_kriging(
                 xs, ys, zs, bounds, MDT_RESOLUTION, FORCE_EPSG,
-                OUTPUT_DIR, f"{Path(INPUT_IMAGE_PATH).stem}_MDT_IDW", log_file
+                OUTPUT_DIR, f"{Path(INPUT_IMAGE_PATH).stem}_MDT_KRIGING", log_file
             )
             
             # ETAPA 6: Filtragem agressiva do shape (pos-MDT)

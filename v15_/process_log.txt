@@ -1,14 +1,14 @@
-[16:34:06] ============================================================
-[16:34:06] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
-[16:34:06] ============================================================
-[16:34:28] Extraindo 2094 pontos de floresta...
-[16:34:28] Extraindo 2090 pontos de solo...
-[16:34:29] 
+[17:02:08] ============================================================
+[17:02:08] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[17:02:08] ============================================================
+[17:02:36] Extraindo 2094 pontos de floresta...
+[17:02:36] Extraindo 2090 pontos de solo...
+[17:02:37] 
 ============================================================
-[16:34:29] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
-[16:34:29] ============================================================
-[16:34:29] Acuracia: 0.9540
-[16:34:29] Relatorio:
+[17:02:37] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[17:02:37] ============================================================
+[17:02:38] Acuracia: 0.9540
+[17:02:38] Relatorio:
               precision    recall  f1-score   support
 
            0       0.94      0.97      0.95      6713
@@ -18,40 +18,201 @@
    macro avg       0.95      0.95      0.95     13389
 weighted avg       0.95      0.95      0.95     13389
 
-[16:34:29] 
+[17:02:38] 
 Importancia das Features:
-[16:34:29]   ExGR: 0.1596
-[16:34:29]   ExR: 0.1181
-[16:34:29]   ExG: 0.1176
-[16:34:29]   ExB: 0.0901
-[16:34:29]   Variance: 0.0886
-[16:34:29]   H: 0.0782
-[16:34:29]   Sobel: 0.0619
-[16:34:29]   S: 0.0612
-[16:34:29]   B: 0.0590
-[16:34:29]   R: 0.0553
-[16:34:29]   G: 0.0401
-[16:34:29]   V: 0.0389
-[16:34:29]   Slope: 0.0158
-[16:34:29]   MDS: 0.0154
-[16:34:29] 
+[17:02:38]   ExGR: 0.1596
+[17:02:38]   ExR: 0.1181
+[17:02:38]   ExG: 0.1176
+[17:02:38]   ExB: 0.0901
+[17:02:38]   Variance: 0.0886
+[17:02:38]   H: 0.0782
+[17:02:38]   Sobel: 0.0619
+[17:02:38]   S: 0.0612
+[17:02:38]   B: 0.0590
+[17:02:38]   R: 0.0553
+[17:02:38]   G: 0.0401
+[17:02:38]   V: 0.0389
+[17:02:38]   Slope: 0.0158
+[17:02:38]   MDS: 0.0154
+[17:02:38] 
 ============================================================
-[16:34:29] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
-[16:34:29] ============================================================
-[16:35:43] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
-[16:35:43] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
-[16:35:43] Iniciando filtragem espacial para a classe solo...
-[16:35:43] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
-[16:35:43] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
-[16:35:50] Total de pontos para filtragem: 1192630
-[16:35:50] Aplicando buffer de 0.75m e dissolvendo polígonos...
-[16:36:05] Buffers aplicados. Iniciando dissolução...
-[16:40:44] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
-[16:40:44] Polígonos dissolvidos gerados: 106798
-[16:40:44] Filtrando polígonos com área menor que 12.50 m²...
-[16:40:45] Polígonos restantes após filtragem: 4682
-[16:40:45] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
-[16:40:45] Filtrando pontos originais com base nos polígonos resultantes...
-[16:40:46] Pontos restantes após filtragem: 989704
-[16:40:48] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
-[16:40:48] Processo concluído com sucesso.
+[17:02:38] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[17:02:38] ============================================================
+[17:04:39] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
+[17:04:39] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
+[17:04:39] Iniciando filtragem espacial para a classe solo...
+[17:04:39] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[17:04:39] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
+[17:04:47] Total de pontos para filtragem: 1192630
+[17:04:47] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[17:05:06] Buffers aplicados. Iniciando dissolução...
+[17:12:32] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
+[17:12:32] Polígonos dissolvidos gerados: 106798
+[17:12:32] Filtrando polígonos com área menor que 12.50 m²...
+[17:12:33] Polígonos restantes após filtragem: 4682
+[17:12:33] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[17:12:33] Filtrando pontos originais com base nos polígonos resultantes...
+[17:12:35] Pontos restantes após filtragem: 989704
+[17:12:37] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[17:12:38] Processo concluído com sucesso.
+[17:13:40] ============================================================
+[17:13:40] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[17:13:40] ============================================================
+[17:14:07] Extraindo 2094 pontos de floresta...
+[17:14:07] Extraindo 2090 pontos de solo...
+[17:14:08] 
+============================================================
+[17:14:08] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[17:14:08] ============================================================
+[17:14:09] Acuracia: 0.9540
+[17:14:09] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[17:14:09] 
+Importancia das Features:
+[17:14:09]   ExGR: 0.1596
+[17:14:09]   ExR: 0.1181
+[17:14:09]   ExG: 0.1176
+[17:14:09]   ExB: 0.0901
+[17:14:09]   Variance: 0.0886
+[17:14:09]   H: 0.0782
+[17:14:09]   Sobel: 0.0619
+[17:14:09]   S: 0.0612
+[17:14:09]   B: 0.0590
+[17:14:09]   R: 0.0553
+[17:14:09]   G: 0.0401
+[17:14:09]   V: 0.0389
+[17:14:09]   Slope: 0.0158
+[17:14:09]   MDS: 0.0154
+[17:14:09] 
+============================================================
+[17:14:09] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[17:14:09] ============================================================
+[17:15:48] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
+[17:15:48] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
+[17:15:48] Iniciando filtragem espacial para a classe solo...
+[17:15:48] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[17:15:48] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
+[17:15:57] Total de pontos para filtragem: 1192630
+[17:15:57] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[17:16:14] Buffers aplicados. Iniciando dissolução...
+[17:23:16] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
+[17:23:16] Polígonos dissolvidos gerados: 106798
+[17:23:16] Filtrando polígonos com área menor que 12.50 m²...
+[17:23:16] Polígonos restantes após filtragem: 4682
+[17:23:17] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[17:23:17] Filtrando pontos originais com base nos polígonos resultantes...
+[17:23:19] Pontos restantes após filtragem: 989704
+[17:23:21] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[17:23:21] Processo concluído com sucesso.
+[17:31:36] ============================================================
+[17:31:36] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[17:31:36] ============================================================
+[17:32:30] Extraindo 2094 pontos de floresta...
+[17:32:31] Extraindo 2090 pontos de solo...
+[17:32:32] 
+============================================================
+[17:32:32] ETAPA 2: TREINAMENTO DO MODELO (Random Forest)
+[17:32:32] ============================================================
+[17:32:34] Acuracia: 0.9540
+[17:32:34] Relatorio:
+              precision    recall  f1-score   support
+
+           0       0.94      0.97      0.95      6713
+           1       0.97      0.93      0.95      6676
+
+    accuracy                           0.95     13389
+   macro avg       0.95      0.95      0.95     13389
+weighted avg       0.95      0.95      0.95     13389
+
+[17:32:35] 
+Importancia das Features:
+[17:32:35]   ExGR: 0.1596
+[17:32:35]   ExR: 0.1181
+[17:32:35]   ExG: 0.1176
+[17:32:35]   ExB: 0.0901
+[17:32:35]   Variance: 0.0886
+[17:32:35]   H: 0.0782
+[17:32:35]   Sobel: 0.0619
+[17:32:35]   S: 0.0612
+[17:32:35]   B: 0.0590
+[17:32:35]   R: 0.0553
+[17:32:35]   G: 0.0401
+[17:32:35]   V: 0.0389
+[17:32:35]   Slope: 0.0158
+[17:32:35]   MDS: 0.0154
+[17:32:35] 
+============================================================
+[17:32:35] ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS
+[17:32:35] ============================================================
+[17:35:08] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_floresta.tif
+[17:35:08] Raster salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_prob_solo.tif
+[17:35:08] Iniciando filtragem espacial para a classe solo...
+[17:35:08] Tamanho do buffer por ponto: 1.5 pixels = 0.75 metros
+[17:35:08] Área mínima para um grupo de pixels: 50 pixels = 12.50 m²
+[17:35:20] Total de pontos para filtragem: 1192630
+[17:35:20] Aplicando buffer de 0.75m e dissolvendo polígonos...
+[17:35:41] Buffers aplicados. Iniciando dissolução...
+[17:52:28] Dissolução concluída. Tipo geométrico resultante: MultiPolygon
+[17:52:29] Polígonos dissolvidos gerados: 106798
+[17:52:29] Filtrando polígonos com área menor que 12.50 m²...
+[17:52:29] Polígonos restantes após filtragem: 4682
+[17:52:29] Polígonos filtrados salvos em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\process\filtered_groups_solo.shp
+[17:52:29] Filtrando pontos originais com base nos polígonos resultantes...
+[17:52:32] Pontos restantes após filtragem: 989704
+[17:52:34] LAS filtrado salvo: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[17:52:35] 
+============================================================
+[17:52:35] ETAPA 4: EXTRACAO DE Z DO MDS PARA OS PONTOS LAS
+[17:52:35] ============================================================
+[17:52:35]    -> LAS: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_solo_confidence.laz
+[17:52:35]    -> Pontos: 989,704
+[17:52:35]    -> Coordenadas X/Y carregadas: 989,704
+[17:52:35]    -> MDS: D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif
+[17:52:35]    -> MDS shape: (23419, 19825)
+[17:52:35]    -> MDS CRS: EPSG:31982
+[17:52:35]    -> MDS resolucao: 0.2182m
+[17:52:35]    -> Pontos dentro do MDS: 989,704
+[17:52:35]    -> Pontos fora do MDS: 0
+[17:52:41]    -> Z extraidos com sucesso: 989,704
+[17:52:41]    -> Z min: 185.09m
+[17:52:41]    -> Z max: 231.01m
+[17:52:41]    -> Z medio: 209.88m
+[17:52:41]    -> Tempo: 0:00:06
+[17:52:41] 
+============================================================
+[17:52:41] ETAPA 5: GERACAO DO MDT POR IDW + KDTREE
+[17:52:41] ============================================================
+[17:52:41]    -> Resolucao do MDT: 0.5m
+[17:52:41]    -> Bounds: left=554402.85, bottom=9075526.90, right=558273.15, top=9080319.07
+[17:52:41]    -> Dimensoes raster: 7741 x 9585 pixels
+[17:52:41]    -> Total de pixels: 74,197,485
+[17:52:41]    -> Pontos de entrada: 989,704
+[17:52:41]    -> Vizinhos IDW: 10
+[17:52:41]    -> Potencia IDW: 2.0
+[17:52:41] 
+   Construindo KDTree...
+[17:52:41]    -> KDTree construida em 0:00:00
+[17:52:41] 
+   Processando IDW por chunks de 512x512...
+[17:53:47] 
+   -> MDT gerado em: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_MDT_IDW.tif
+[17:53:47]    -> Tempo total IDW: 0:01:06
+[17:53:48]    -> MDT Z min: 185.10m
+[17:53:48]    -> MDT Z max: 230.91m
+[17:53:48]    -> MDT Z medio: 203.91m
+[17:53:49]    -> MDT STD: 7.85m
+[17:53:49]    -> Pixels preenchidos: 74,197,485 de 74,197,485 (100.0%)
+[17:53:49] 
+Pipeline completo! MDT gerado: D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_\Imaru2_MDT_IDW.tif
+[17:53:49] Processo concluído com sucesso.
+[18:12:02] ============================================================
+[18:12:02] ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO
+[18:12:02] ============================================================

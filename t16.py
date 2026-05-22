@@ -10,9 +10,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 import geopandas as gpd
 import laspy
-from scipy.spatial import KDTree
 from tqdm import tqdm
 import warnings
+from scipy import ndimage
+from scipy.spatial import KDTree
+from shapely.geometry import Point, Polygon, MultiPolygon
+from shapely.ops import unary_union
+from scipy.ndimage import gaussian_filter
+
 warnings.filterwarnings("ignore")
 
 # =============================================================================
@@ -21,8 +26,18 @@ warnings.filterwarnings("ignore")
 INPUT_IMAGE_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\Imaru2.tif"
 MDS_PATH = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\MDS.tif"
 BUFFER_SIZE_METERS = 0.85
-OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v16"
+OUTPUT_DIR = r"D:\TESTES_PYTHON\OPEM_CV_TESTE\v15_"
+PROCESS_DIR = os.path.join(OUTPUT_DIR, "process")
 FORCE_EPSG = "EPSG:31982"
+PIXELS_BUFFER = 1.5 # Buffer em pixels para cada ponto LAS
+GROUP_PIXELS = 50 # Número mínimo de pixels para um grupo ser considerado válido
+GROUP_PIXELS_SHP = GROUP_PIXELS*5 #USADO SOMENTE NO FINAL E APENAS NO FINAL
+IDW_K_NEIGHBORS = 24
+IDW_POWER = 2.0
+MDT_CHUNK_SIZE = 512
+MDT_RESOLUTION = 0.50  # resolucao do MDT em metros
+IDW_SMOOTH_SIGMA = 1.5  
+
 
 # Config de classes
 CLASSIFICATION_CONFIG = {
@@ -37,415 +52,347 @@ CLASSIFICATION_CONFIG = {
         "shp_path": r"D:\TESTES_PYTHON\OPEM_CV_TESTE\imaru\solo_pts.shp",
         "output_tif_suffix": "_prob_solo.tif",
         "output_las_suffix": "_solo_confidence.laz",
-        "confidence": 0.00001,
+        "confidence": 0.00005,
         "label_value": 0
     }
 }
 
-# Parametros IDW para MDT
-IDW_K_NEIGHBORS = 12
-IDW_POWER = 2.0
-MDT_RESOLUTION = 1.0       # metros
-MDT_CHUNK_SIZE = 256
-
 # =============================================================================
-# FUNCOES AUXILIARES
+# FUNCOES AUXILIARES E INDICES
 # =============================================================================
 
 def log_message(message, log_file=None, also_print=True):
     msg = f"[{time.strftime('%H:%M:%S')}] {message}"
     if also_print:
-        try:
-            print(msg)
-        except UnicodeEncodeError:
-            sanitized = msg.encode("ascii", errors="replace").decode("ascii")
-            print(sanitized)
+        print(msg)
     if log_file:
         with open(log_file, "a", encoding="utf-8") as f:
             f.write(msg + "\n")
 
-
 def format_time(seconds):
     return str(timedelta(seconds=int(seconds)))
 
-
 def calculate_indices(img_rgb):
-    r, g, b = (
-        img_rgb[:, :, 0].astype(float),
-        img_rgb[:, :, 1].astype(float),
-        img_rgb[:, :, 2].astype(float),
-    )
+    """Calcula indices de vegetacao e texturas."""
+    r = img_rgb[:, :, 0].astype(float)
+    g = img_rgb[:, :, 1].astype(float)
+    b = img_rgb[:, :, 2].astype(float)
+    
     sum_rgb = r + g + b
     sum_rgb[sum_rgb == 0] = 1
-    r_n, g_n, b_n = r / sum_rgb, g / sum_rgb, b / sum_rgb
+    rn, gn, bn = r / sum_rgb, g / sum_rgb, b / sum_rgb
     
-    exg = 2 * g_n - r_n - b_n
-    exr = 1.4 * r_n - g_n
-    exb = 1.4 * b_n - g_n
+    exg = 2 * gn - rn - bn
+    exr = 1.4 * rn - gn
+    exb = 1.4 * bn - gn
     exgr = exg - exr
     
-    return exg, exr, exb, exgr
-
-
-def calculate_texture(img_rgb):
-    # Convert to gray for texture analysis
-    gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY).astype(float)
+    gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+    mean = ndimage.uniform_filter(gray.astype(float), size=3)
+    sq_mean = ndimage.uniform_filter(gray.astype(float)**2, size=3)
+    variance = sq_mean - mean**2
+    variance[variance < 0] = 0
     
-    # Sobel Gradient
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    sobel_mag = np.sqrt(sobelx**2 + sobely**2)
+    sobel = np.sqrt(sobelx**2 + sobely**2)
     
-    # Local Variance (3x3 window)
-    mean = cv2.blur(gray, (3, 3))
-    mean_sq = cv2.blur(gray**2, (3, 3))
-    variance = mean_sq - mean**2
-    variance[variance < 0] = 0 # Numerical stability
+    return {
+        "ExG": exg, "ExR": exr, "ExB": exb, "ExGR": exgr,
+        "Variance": variance, "Sobel": sobel
+    }
+
+def calculate_slope(mds, res):
+    """Calcula declividade em % a partir do MDS."""
+    x, y = np.gradient(mds, res)
+    slope = np.sqrt(x**2 + y**2)
+    slope_pct = np.tan(np.arctan(slope)) * 100
+    return slope_pct
+
+def save_process_raster(data, meta, name, out_dir):
+    """Salva rasters intermediarios para validacao."""
+    path = os.path.join(out_dir, f"{name}.tif")
+    with rasterio.open(path, "w", **meta) as dst:
+        dst.write(data.astype(np.float32), 1)
+    return path
+
+# =============================================================================
+# FILTRAGEM ESPACIAL DE PONTOS (usada dentro da Etapa 3)
+# =============================================================================
+def filter_points_by_spatial_group(
+    points_data,
+    gsd, 
+    pixels_buffer_val, 
+    group_pixels_val, 
+    process_dir, 
+    log_file,
+    class_name
+):
+    log_message(f"Iniciando filtragem espacial para a classe {class_name}...", log_file)
+
+    if len(points_data) == 0:
+        log_message(f"Nenhum ponto para filtrar para a classe {class_name}.", log_file)
+        return np.array([]), None
+
+    buffer_dist_meters = pixels_buffer_val * gsd
+    log_message(f"Tamanho do buffer por ponto: {pixels_buffer_val} pixels = {buffer_dist_meters:.2f} metros", log_file)
+
+    min_group_area_sq_m = group_pixels_val * (gsd ** 2)
+    log_message(f"Área mínima para um grupo de pixels: {group_pixels_val} pixels = {min_group_area_sq_m:.2f} m²", log_file)
+
+    geometry = [Point(xy) for xy in points_data[:, :2]]
+    gdf = gpd.GeoDataFrame(geometry=geometry, crs=FORCE_EPSG)
+    log_message(f"Total de pontos para filtragem: {len(gdf)}", log_file)
+
+    log_message(f"Aplicando buffer de {buffer_dist_meters:.2f}m e dissolvendo polígonos...", log_file)
+    buffered_series = gdf.buffer(buffer_dist_meters)
+    log_message(f"Buffers aplicados. Iniciando dissolução...", log_file)
     
-    return variance, sobel_mag
+    dissolved = unary_union(buffered_series.tolist())
+    log_message(f"Dissolução concluída. Tipo geométrico resultante: {dissolved.geom_type}", log_file)
+    
+    if dissolved.geom_type == 'MultiPolygon':
+        polygons = list(dissolved.geoms)
+    elif dissolved.geom_type == 'Polygon':
+        polygons = [dissolved]
+    else:
+        polygons = []
+    
+    dissolved_gdf = gpd.GeoDataFrame(geometry=polygons, crs=FORCE_EPSG)
+    log_message(f"Polígonos dissolvidos gerados: {len(dissolved_gdf)}", log_file)
 
+    log_message(f"Filtrando polígonos com área menor que {min_group_area_sq_m:.2f} m²...", log_file)
+    filtered_polygons = dissolved_gdf[dissolved_gdf.area >= min_group_area_sq_m]
+    log_message(f"Polígonos restantes após filtragem: {len(filtered_polygons)}", log_file)
 
-def get_epsg_from_las(las_path):
-    """Tenta extrair EPSG do cabeçalho VLR do LAS."""
-    try:
-        with laspy.open(las_path) as las:
-            for vlr in las.header.vlrs:
-                if hasattr(vlr, 'record_id') and vlr.record_id == 2111:
-                    wkt = vlr.parsed_string
-                    if "EPSG" in wkt or "epsg" in wkt or "Epsg" in wkt:
-                        import re
-                        match = re.search(r'EPSG["\s]*[\[\],]*\s*(\d+)', wkt, re.IGNORECASE)
-                        if match:
-                            epsg_code = match.group(1).strip()
-                            log_message(f"[LAS] EPSG: {epsg_code} extraido do cabeçalho LAS.")
-                            return f"EPSG:{epsg_code}"
-                if hasattr(vlr, 'record_id') and vlr.record_id == 34735:
-                    geo_data = vlr.parsed_bytes
-                    try:
-                        geo_keys = np.frombuffer(geo_data, dtype=np.uint16).reshape(-1, 4)
-                        for key in geo_keys:
-                            if key[0] == 3072:
-                                epsg_code = key[3]
-                                if epsg_code > 0:
-                                    log_message(f"[LAS] EPSG: {epsg_code} extraido de GeoTIFF VLR.")
-                                    return f"EPSG:{epsg_code}"
-                    except:
-                        pass
-    except Exception:
-        pass
-    return None
+    output_shp_path = os.path.join(process_dir, f"filtered_groups_{class_name}.shp")
+    if not filtered_polygons.empty:
+        filtered_polygons.to_file(output_shp_path)
+        log_message(f"Polígonos filtrados salvos em: {output_shp_path}", log_file)
+    else:
+        log_message(f"Nenhum polígono restante para salvar para a classe {class_name}.", log_file)
+        output_shp_path = None
 
+    log_message("Filtrando pontos originais com base nos polígonos resultantes...", log_file)
+    if not filtered_polygons.empty:
+        points_in_polygons = gpd.sjoin(gdf, filtered_polygons, how="inner", predicate='within')
+        original_indices = points_in_polygons.index.unique()
+        filtered_points_data = points_data[original_indices]
+        log_message(f"Pontos restantes após filtragem: {len(filtered_points_data)}", log_file)
+    else:
+        filtered_points_data = np.array([])
+        log_message(f"Nenhum ponto restante após filtragem para a classe {class_name}.", log_file)
+
+    return filtered_points_data, output_shp_path
 
 # =============================================================================
 # ETAPA 1: EXTRACAO DE FEATURES
 # =============================================================================
 
-def extract_features_for_training(tiff_path, classification_config, buffer_size_m, log_file):
+def extract_features_for_training(tiff_path, mds_path, classification_config, buffer_size_m, log_file, process_dir):
     log_message("=" * 60, log_file)
     log_message("ETAPA 1: EXTRACAO DE FEATURES PARA TREINAMENTO", log_file)
     log_message("=" * 60, log_file)
-    log_message(f"Imagem de entrada: {tiff_path}", log_file)
+    
+    os.makedirs(process_dir, exist_ok=True)
 
-    with rasterio.open(tiff_path) as src:
+    with rasterio.open(tiff_path) as src, rasterio.open(mds_path) as src_mds:
         gsd = abs(src.transform[0])
         buffer_px = max(1, int(np.ceil(buffer_size_m / gsd)))
-
-        h_img, w_img = src.shape
-        n_bands = src.count
-        crs_str = str(src.crs) if src.crs else "Nao definido"
-        bounds = src.bounds
-        log_message(f"Dimensoes da imagem: {w_img} x {h_img} pixels ({n_bands} bandas)", log_file)
-        log_message(f"Resolucao (GSD): {gsd:.6f} m/pixel", log_file)
-        log_message(f"CRS: {crs_str}", log_file)
-        log_message(f"Extent (bounds): left={bounds.left:.2f}, bottom={bounds.bottom:.2f}, right={bounds.right:.2f}, top={bounds.top:.2f}", log_file)
-        log_message(f"Buffer de treinamento: {buffer_size_m}m -> {buffer_px} pixels", log_file)
-        log_message(f"Usando bandas 1(R), 2(G), 3(B) para features", log_file)
-
+        
         img_rgb = np.moveaxis(src.read([1, 2, 3]), 0, -1)
-        img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
+        mds = src_mds.read(1)
         
-        # Calcular novos índices e texturas
-        exg, exr, exb, exgr = calculate_indices(img_rgb)
-        variance, sobel = calculate_texture(img_rgb)
+        indices = calculate_indices(img_rgb)
+        slope = calculate_slope(mds, gsd)
+        hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
         
-        n_features = 12
+        meta = src.meta.copy()
+        meta.update(dtype="float32", count=1, nodata=np.nan)
+        for name, data in indices.items():
+            save_process_raster(data, meta, name, process_dir)
+        save_process_raster(slope, meta, "Slope", process_dir)
+        
+        feature_names = ["R", "G", "B", "H", "S", "V", "ExG", "ExR", "ExB", "ExGR", "Variance", "Sobel", "MDS", "Slope"]
 
         all_features, all_labels = [], []
 
-        def process_class(path, label_val, name, src_obj, rgb, hsv, exg, exr, exb, exgr, var, sob, b_px):
+        for class_name, config in classification_config.items():
+            path = config["shp_path"]
+            label_val = config["label_value"]
+            
             if Path(path).is_file():
                 gdf = gpd.read_file(path)
-                log_message(f"Extraindo {len(gdf)} pontos de {name}...", log_file)
+                log_message(f"Extraindo {len(gdf)} pontos de {class_name}...", log_file)
+                
+                buffer_gdf = gdf.copy()
+                buffer_gdf.geometry = buffer_gdf.buffer(buffer_size_m)
+                buffer_gdf.to_file(os.path.join(process_dir, f"val_buffer_{class_name}.shp"))
+                
                 f_list, l_list = [], []
-                valid_count = 0
-                out_of_bounds = 0
                 for geom in gdf.geometry:
                     if geom.geom_type == "Point":
-                        c, r = src_obj.index(geom.x, geom.y)
-                        r_s, r_e = max(0, r - b_px), min(src_obj.height, r + b_px)
-                        c_s, c_e = max(0, c - b_px), min(src_obj.width, c + b_px)
+                        c, r = src.index(geom.x, geom.y)
+                        r_s, r_e = max(0, r - buffer_px), min(src.height, r + buffer_px)
+                        c_s, c_e = max(0, c - buffer_px), min(src.width, c + buffer_px)
+                        
                         if r_s < r_e and c_s < c_e:
-                            feat = np.hstack([rgb[r_s:r_e, c_s:c_e].reshape(-1, 3),
-                                              hsv[r_s:r_e, c_s:c_e].reshape(-1, 3),
-                                              exg[r_s:r_e, c_s:c_e].reshape(-1, 1),
-                                              exr[r_s:r_e, c_s:c_e].reshape(-1, 1),
-                                              exb[r_s:r_e, c_s:c_e].reshape(-1, 1),
-                                              exgr[r_s:r_e, c_s:c_e].reshape(-1, 1),
-                                              var[r_s:r_e, c_s:c_e].reshape(-1, 1),
-                                              sob[r_s:r_e, c_s:c_e].reshape(-1, 1)])
+                            feat = np.hstack([
+                                img_rgb[r_s:r_e, c_s:c_e].reshape(-1, 3),
+                                hsv[r_s:r_e, c_s:c_e].reshape(-1, 3),
+                                indices["ExG"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                indices["ExR"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                indices["ExB"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                indices["ExGR"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                indices["Variance"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                indices["Sobel"][r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                mds[r_s:r_e, c_s:c_e].reshape(-1, 1),
+                                slope[r_s:r_e, c_s:c_e].reshape(-1, 1)
+                            ])
                             f_list.append(feat)
                             l_list.append(np.full(feat.shape[0], label_val))
-                            valid_count += 1
-                        else:
-                            out_of_bounds += 1
-                log_message(f"  -> {name}: {valid_count} pontos dentro da imagem, {out_of_bounds} fora dos limites", log_file)
-                return f_list, l_list
-            else:
-                log_message(f"  -> Arquivo de {name} nao encontrado: {path}", log_file)
-                return [], []
+                
+                if f_list:
+                    all_features.extend(f_list)
+                    all_labels.extend(l_list)
 
-        for class_name, config in classification_config.items():
-            f_class, l_class = process_class(config["shp_path"], config["label_value"], class_name, src, 
-                                             img_rgb, img_hsv, exg, exr, exb, exgr, variance, sobel, buffer_px)
-            all_features.extend(f_class)
-            all_labels.extend(l_class)
-
-    if not all_features:
-        log_message("ERRO: Nenhuma feature extraida! Verifique os arquivos de pontos.", log_file)
-        return np.empty((0, n_features)), np.empty((0,))
-
-    total_pixels = sum(f.shape[0] for f in all_features)
-    log_message(f"\nResumo da extracao:", log_file)
-    log_message(f"  -> Features por pixel: R, G, B | H, S, V | ExG, ExR, ExB, ExGR | Var, Sobel = {n_features} features", log_file)
-    for class_name, config in classification_config.items():
-        class_pixels = sum(np.sum(l == config["label_value"]) for l in all_labels if len(l) > 0)
-        log_message(f"  -> Total de pixels de {class_name} para treino: {class_pixels:,}", log_file)
-    log_message(f"  -> Total de amostras (pixels): {total_pixels:,}", log_file)
-
-    return np.vstack(all_features), np.concatenate(all_labels)
-
+    return np.vstack(all_features), np.concatenate(all_labels), feature_names
 
 # =============================================================================
 # ETAPA 2: TREINAMENTO
 # =============================================================================
 
-def train_model(features, labels, log_file):
+def train_model(features, labels, feature_names, log_file):
     log_message("\n" + "=" * 60, log_file)
     log_message("ETAPA 2: TREINAMENTO DO MODELO (Random Forest)", log_file)
     log_message("=" * 60, log_file)
-    t0 = time.time()
-
+    
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
-    log_message(f"Tamanho do conjunto de treino: {X_train.shape[0]:,} pixels", log_file)
-    log_message(f"Tamanho do conjunto de teste: {X_test.shape[0]:,} pixels", log_file)
-
-    for label_val in np.unique(labels):
-        log_message(f"Distribuicao treino - Classe {label_val}: {np.sum(y_train==label_val)}", log_file)
-        log_message(f"Distribuicao teste  - Classe {label_val}: {np.sum(y_test==label_val)}", log_file)
-
-    log_message("Treinando Random Forest (n_estimators=250, max_depth=20)...", log_file)
-    model = RandomForestClassifier(n_estimators=250, n_jobs=-1, max_depth=20, random_state=42)
+    
+    model = RandomForestClassifier(n_estimators=250, n_jobs=-1, max_depth=25, random_state=42)
     model.fit(X_train, y_train)
-    train_time = time.time() - t0
-
+    
     y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    report = classification_report(y_test, y_pred)
-
-    log_message(f"\nTempo de treinamento: {format_time(train_time)}", log_file)
-    log_message(f"Acuracia: {acc:.4f}", log_file)
-    log_message(f"Relatorio de Classificacao:\n{report}", log_file)
-
-    feature_names = ["R", "G", "B", "H", "S", "V", "ExG", "ExR", "ExB", "ExGR", "Var", "Sobel"]
-    log_message(f"\nImportancia das Features (Random Forest):", log_file)
+    log_message(f"Acuracia: {accuracy_score(y_test, y_pred):.4f}", log_file)
+    log_message(f"Relatorio:\n{classification_report(y_test, y_pred)}", log_file)
+    
     importances = sorted(zip(feature_names, model.feature_importances_), key=lambda x: -x[1])
+    log_message("\nImportancia das Features:", log_file)
     for name, imp in importances:
-        log_message(f"  {name}: {imp:.4f} ({imp*100:.1f}%)", log_file)
-
-    log_message(f"\nClasses do modelo (ordem predict_proba): {model.classes_}", log_file)
-    log_message(f"Numero de classes: {len(model.classes_)}", log_file)
+        log_message(f"  {name}: {imp:.4f}", log_file)
+        
     return model
 
-
 # =============================================================================
-# ETAPA 3: CLASSIFICACAO + GERACAO MAPAS/LAS
+# ETAPA 3: GERACAO RASTER E LAS DE CONFIDENCIA
 # =============================================================================
 
-def generate_probability_maps(tiff_path, rf_model, classification_config, out_dir, log_file,
-                                chunk_size=1024, batch_size=200000):
+def generate_probability_maps(tiff_path, mds_path, rf_model, classification_config, out_dir, log_file, chunk_size=1024):
     log_message("\n" + "=" * 60, log_file)
-    log_message("ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E PONTOS DE CONFIDENCIA", log_file)
+    log_message("ETAPA 3: GERACAO DE MAPAS DE PROBABILIDADE E FILTRAGEM DE LAS", log_file)
     log_message("=" * 60, log_file)
 
-    input_path = Path(tiff_path)
-    output_base_name = input_path.stem
-    output_dir = Path(out_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    las_path_result = None
+    shape_paths = {}
 
-    log_message(f"\nConfiguracoes de Geracao:", log_file)
-    log_message(f"  -> Imagem de entrada: {tiff_path}", log_file)
-    log_message(f"  -> Diretorio de saida: {output_dir}", log_file)
-    log_message(f"  -> Nome base dos arquivos de saida: {output_base_name}", log_file)
-    log_message(f"  -> Tamanho do chunk: {chunk_size}x{chunk_size} pixels", log_file)
-    log_message(f"  -> Tamanho do batch de predicao: {batch_size:,} pixels", log_file)
-
-    t_pipeline_start = time.time()
-
-    class_indices = {config["label_value"]: np.where(rf_model.classes_ == config["label_value"])[0][0]
-                     for class_name, config in classification_config.items()}
-
-    log_message(f"\n[INFO] Mapeamento de classes: rf_model.classes_ = {rf_model.classes_}", log_file)
-    for class_name, config in classification_config.items():
-        log_message(f"[INFO] {class_name}_class_idx = {class_indices[config['label_value']]} "
-                    f"(probabilidade de {class_name}, classe {config['label_value']})", log_file)
-
-    with rasterio.open(tiff_path) as src:
+    with rasterio.open(tiff_path) as src, rasterio.open(mds_path) as src_mds:
         h, w = src.shape
+        gsd = abs(src.transform[0])
         meta = src.meta.copy()
         meta.update(dtype="float32", count=1, nodata=np.nan)
+        
+        class_indices = {config["label_value"]: np.where(rf_model.classes_ == config["label_value"])[0][0]
+                         for config in classification_config.values()}
+        
+        prob_maps = {name: np.full((h, w), np.nan, dtype=np.float32) for name in classification_config.keys()}
+        all_confidence_points = {name: [] for name, cfg in classification_config.items() if cfg["confidence"] is not None}
 
-        # Verificar NoData / banda alpha
-        nodata_val = src.nodata
-        has_alpha = False
-        alpha_band_idx = None
-        for i in range(1, src.count + 1):
-            if src.colorinterp[i-1] == rasterio.enums.ColorInterp.alpha:
-                has_alpha = True
-                alpha_band_idx = i
-                break
-
-        if has_alpha:
-            log_message(f"[INFO] Banda Alpha detectada (banda {alpha_band_idx}). Usando Alpha < 250 como NoData.", log_file)
-        elif nodata_val is not None:
-            log_message(f"[INFO] Valor NoData detectado: {nodata_val}", log_file)
-        else:
-            log_message("[INFO] Nenhum NoData ou Banda Alpha detectado.", log_file)
-
-        prob_maps = {class_name: np.full((h, w), np.nan, dtype=np.float32)
-                     for class_name in classification_config.keys()}
-
-        all_confidence_points = {class_name: [] for class_name in classification_config.keys()
-                                 if classification_config[class_name]["confidence"] is not None}
-
-        log_message(f"\nClassificando a imagem inteira com Random Forest...", log_file)
-        log_message(f"  -> Dimensoes: {w}x{h} pixels = {w*h:,} pixels", log_file)
-
-        total_chunks = (h // chunk_size + (1 if h % chunk_size > 0 else 0)) * \
-                       (w // chunk_size + (1 if w % chunk_size > 0 else 0))
-
-        with tqdm(total=total_chunks, desc="Processando chunks", unit="chunk") as pbar:
+        total_chunks = (h // chunk_size + 1) * (w // chunk_size + 1)
+        with tqdm(total=total_chunks, desc="Processando chunks") as pbar:
             for r_s in range(0, h, chunk_size):
                 r_e = min(r_s + chunk_size, h)
                 for c_s in range(0, w, chunk_size):
                     c_e = min(c_s + chunk_size, w)
-
+                    
                     win = rasterio.windows.Window(c_s, r_s, c_e - c_s, r_e - r_s)
                     rgb = np.moveaxis(src.read([1, 2, 3], window=win), 0, -1)
-
-                    if has_alpha:
-                        alpha = src.read(alpha_band_idx, window=win)
+                    mds_chunk = src_mds.read(1, window=win)
+                    
+                    mask = np.ones((r_e - r_s, c_e - c_s), dtype=bool)
+                    if src.count >= 4:
+                        alpha = src.read(4, window=win)
                         mask = alpha >= 250
-                    elif nodata_val is not None:
-                        mask = ~np.any(rgb == nodata_val, axis=-1)
-                    else:
-                        mask = np.ones((r_e - r_s, c_e - c_s), dtype=bool)
-
+                    
                     if np.any(mask):
-                        rgb_u8 = np.clip(rgb, 0, 255).astype(np.uint8)
-
-                        rgb_valid = rgb_u8[mask]
-                        hsv_valid = cv2.cvtColor(rgb_u8, cv2.COLOR_RGB2HSV)[mask]
+                        indices = calculate_indices(rgb)
+                        slope = calculate_slope(mds_chunk, gsd)
+                        hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
                         
-                        # Calcular novos índices e texturas para o chunk
-                        exg_full, exr_full, exb_full, exgr_full = calculate_indices(rgb_u8)
-                        var_full, sob_full = calculate_texture(rgb_u8)
+                        feat_valid = np.hstack([
+                            rgb[mask].reshape(-1, 3),
+                            hsv[mask].reshape(-1, 3),
+                            indices["ExG"][mask].reshape(-1, 1),
+                            indices["ExR"][mask].reshape(-1, 1),
+                            indices["ExB"][mask].reshape(-1, 1),
+                            indices["ExGR"][mask].reshape(-1, 1),
+                            indices["Variance"][mask].reshape(-1, 1),
+                            indices["Sobel"][mask].reshape(-1, 1),
+                            mds_chunk[mask].reshape(-1, 1),
+                            slope[mask].reshape(-1, 1)
+                        ])
                         
-                        exg_valid = exg_full[mask]
-                        exr_valid = exr_full[mask]
-                        exb_valid = exb_full[mask]
-                        exgr_valid = exgr_full[mask]
-                        var_valid = var_full[mask]
-                        sob_valid = sob_full[mask]
-
-                        feat_valid = np.hstack([rgb_valid, hsv_valid, 
-                                                exg_valid.reshape(-1, 1),
-                                                exr_valid.reshape(-1, 1),
-                                                exb_valid.reshape(-1, 1),
-                                                exgr_valid.reshape(-1, 1),
-                                                var_valid.reshape(-1, 1),
-                                                sob_valid.reshape(-1, 1)])
-                        n_valid = feat_valid.shape[0]
-                        probas_valid = np.zeros((n_valid, len(rf_model.classes_)), dtype=np.float32)
-
-                        for i in range(0, n_valid, batch_size):
-                            j = min(i + batch_size, n_valid)
-                            probas_valid[i:j] = rf_model.predict_proba(feat_valid[i:j])
-
-                        for class_name, config in classification_config.items():
-                            class_idx = class_indices[config["label_value"]]
-                            prob_map_chunk = np.full((r_e - r_s, c_e - c_s), np.nan, dtype=np.float32)
-                            prob_map_chunk[mask] = probas_valid[:, class_idx]
-                            prob_maps[class_name][r_s:r_e, c_s:c_e] = prob_map_chunk
-
-                            confidence_threshold = config.get("confidence")
-                            output_las_suffix = config.get("output_las_suffix")
-                            if confidence_threshold is not None and output_las_suffix is not None:
-                                rows_chunk, cols_chunk = np.where((prob_map_chunk < confidence_threshold) & mask)
-                                if len(rows_chunk) > 0:
-                                    global_rows = rows_chunk + r_s
-                                    global_cols = cols_chunk + c_s
-                                    xs_pt, ys_pt = rasterio.transform.xy(src.transform, global_rows, global_cols)
-                                    confidences = prob_map_chunk[rows_chunk, cols_chunk]
-                                    all_confidence_points[class_name].append(np.vstack([xs_pt, ys_pt, confidences]).T)
-
+                        probas = rf_model.predict_proba(feat_valid)
+                        
+                        for name, config in classification_config.items():
+                            idx = class_indices[config["label_value"]]
+                            prob_chunk = np.full((r_e - r_s, c_e - c_s), np.nan, dtype=np.float32)
+                            prob_chunk[mask] = probas[:, idx]
+                            prob_maps[name][r_s:r_e, c_s:c_e] = prob_chunk
+                            
+                            conf_thresh = config.get("confidence")
+                            if conf_thresh is not None:
+                                rows, cols = np.where((prob_chunk < conf_thresh) & mask)
+                                if len(rows) > 0:
+                                    xs, ys = rasterio.transform.xy(src.transform, rows + r_s, cols + c_s)
+                                    all_confidence_points[name].append(np.vstack([xs, ys, prob_chunk[rows, cols]]).T)
                     pbar.update(1)
 
-        class_time = time.time() - t_pipeline_start
-        log_message(f"  -> Tempo de classificacao e coleta de pontos: {format_time(class_time)}", log_file)
-        log_message(f"  -> Velocidade media: {(w*h)/class_time/1e6:.2f}M pixels/s", log_file)
+        # Salvar Rasters Finais
+        for name, config in classification_config.items():
+            out_path = os.path.join(out_dir, f"{Path(tiff_path).stem}{config['output_tif_suffix']}")
+            with rasterio.open(out_path, "w", **meta) as dst:
+                dst.write(prob_maps[name], 1)
+            log_message(f"Raster salvo: {out_path}", log_file)
 
-        # Salvar TIFs
-        las_paths = {}
-        for class_name, config in classification_config.items():
-            output_path = output_dir / f"{output_base_name}{config['output_tif_suffix']}"
-            with rasterio.open(output_path, "w", **meta) as dst:
-                dst.write(prob_maps[class_name], 1)
-            log_message(f"     - {output_path} (P de ser {class_name})", log_file)
+        # Processar e Salvar LAS de Confidencia
+        for name, points_list in all_confidence_points.items():
+            if points_list:
+                all_pts_raw = np.vstack(points_list)
+                
+                filtered_pts, output_shp_path = filter_points_by_spatial_group(
+                    all_pts_raw, gsd, PIXELS_BUFFER, GROUP_PIXELS,
+                    PROCESS_DIR, log_file, name
+                )
+                
+                shape_paths[name] = output_shp_path
 
-        # Salvar LAS
-        for class_name, points_data_list in all_confidence_points.items():
-            if points_data_list:
-                all_points = np.vstack(points_data_list)
-                header = laspy.LasHeader(point_format=3, version="1.2")
-                header.add_extra_dims([laspy.ExtraBytesParams(name="confidence", type=np.float32)])
-                min_x, min_y = np.min(all_points[:, 0]), np.min(all_points[:, 1])
-                header.x_offset, header.y_offset, header.z_offset = min_x, min_y, 0.0
-                header.x_scale, header.y_scale, header.z_scale = 0.001, 0.001, 0.001
-
-                las = laspy.LasData(header)
-                las.x, las.y = all_points[:, 0], all_points[:, 1]
-                las.z = np.zeros_like(all_points[:, 2])
-                las.confidence = all_points[:, 2]
-
-                output_las_path = output_dir / f"{output_base_name}{classification_config[class_name]['output_las_suffix']}"
-                try:
-                    las.write(output_las_path)
-                    log_message(f"  -> Pontos de confiança para {class_name} salvos em: {output_las_path}", log_file)
-                    las_paths[class_name] = str(output_las_path)
-                except laspy.errors.LaspyException as e:
-                    if "No LazBackend selected" in str(e):
-                        output_las_path = output_las_path.with_suffix(".las")
-                        log_message(f"  -> Backend LAZ não encontrado. Salvando como LAS: {output_las_path}", log_file)
-                        las.write(output_las_path)
-                        las_paths[class_name] = str(output_las_path)
-                    else:
-                        raise e
+                if len(filtered_pts) > 0:
+                    header = laspy.LasHeader(point_format=3, version="1.2")
+                    header.add_extra_dims([laspy.ExtraBytesParams(name="confidence", type=np.float32)])
+                    las = laspy.LasData(header)
+                    las.x, las.y = filtered_pts[:, 0], filtered_pts[:, 1]
+                    las.z = np.zeros_like(filtered_pts[:, 0])
+                    las.confidence = filtered_pts[:, 2]
+                    las_path = os.path.join(out_dir, f"{Path(tiff_path).stem}{classification_config[name]['output_las_suffix']}")
+                    las.write(las_path)
+                    log_message(f"LAS filtrado salvo: {las_path}", log_file)
+                    las_path_result = las_path
+                else:
+                    log_message(f"Nenhum ponto LAS restante após filtragem para a classe {name}.", log_file)
             else:
-                log_message(f"  -> Nenhum ponto de confiança encontrado para {class_name}.", log_file)
+                log_message(f"Nenhum ponto de confiança gerado para a classe {name}.", log_file)
 
-    t_pipeline = time.time() - t_pipeline_start
-    log_message(f"\n  -> Tempo total de geracao: {format_time(t_pipeline)}", log_file)
-    return las_paths
+    return las_path_result, shape_paths
 
 
 # =============================================================================
@@ -521,12 +468,12 @@ def extract_z_from_mds(las_path, mds_path, log_file):
 
 def generate_mdt_idw(xs, ys, zs, bounds, resolution, epsg, output_dir, base_name, log_file):
     log_message("\n" + "=" * 60, log_file)
-    log_message("ETAPA 5: GERACAO DO MDT POR IDW + KDTREE", log_file)
+    log_message("ETAPA 5: GERACAO DO MDT POR IDW + KDTREE (suavizado)", log_file)
     log_message("=" * 60, log_file)
     t0 = time.time()
 
     left, bottom, right, top = bounds
-    width = int(np.ceil((right - left) / resolution))
+    width  = int(np.ceil((right - left) / resolution))
     height = int(np.ceil((top - bottom) / resolution))
 
     log_message(f"   -> Resolucao do MDT: {resolution}m", log_file)
@@ -536,7 +483,23 @@ def generate_mdt_idw(xs, ys, zs, bounds, resolution, epsg, output_dir, base_name
     log_message(f"   -> Pontos de entrada: {len(xs):,}", log_file)
     log_message(f"   -> Vizinhos IDW: {IDW_K_NEIGHBORS}", log_file)
     log_message(f"   -> Potencia IDW: {IDW_POWER}", log_file)
+    log_message(f"   -> Gaussian sigma: {IDW_SMOOTH_SIGMA}", log_file)
 
+    # ------------------------------------------------------------------
+    # 1. Remover outliers estatísticos antes de interpolar
+    # ------------------------------------------------------------------
+    log_message("\n   Removendo outliers por Z-score...", log_file)
+    z_mean = np.nanmean(zs)
+    z_std  = np.nanstd(zs)
+    mask_ok = np.abs(zs - z_mean) < 3.5 * z_std      # mantém ±3.5σ
+    removed = np.sum(~mask_ok)
+    if removed > 0:
+        log_message(f"   -> {removed:,} pontos removidos como outlier", log_file)
+        xs, ys, zs = xs[mask_ok], ys[mask_ok], zs[mask_ok]
+
+    # ------------------------------------------------------------------
+    # 2. KDTree
+    # ------------------------------------------------------------------
     log_message("\n   Construindo KDTree...", log_file)
     t_kd = time.time()
     tree = KDTree(np.column_stack([xs, ys]))
@@ -551,53 +514,89 @@ def generate_mdt_idw(xs, ys, zs, bounds, resolution, epsg, output_dir, base_name
     }
 
     output_path = os.path.join(output_dir, f"{base_name}.tif")
+
+    # ------------------------------------------------------------------
+    # 3. IDW por chunks — acumula raster completo em memória p/ suavizar
+    # ------------------------------------------------------------------
     log_message(f"\n   Processando IDW por chunks de {MDT_CHUNK_SIZE}x{MDT_CHUNK_SIZE}...", log_file)
 
     num_chunks_h = int(np.ceil(height / MDT_CHUNK_SIZE))
-    num_chunks_w = int(np.ceil(width / MDT_CHUNK_SIZE))
+    num_chunks_w = int(np.ceil(width  / MDT_CHUNK_SIZE))
     total_chunks = num_chunks_h * num_chunks_w
 
+    # Buffer em memória para permitir suavização global depois
+    full_raster = np.full((height, width), np.nan, dtype=np.float32)
+
+    with tqdm(total=total_chunks, desc="IDW chunks", unit="chunk") as pbar:
+        for r0 in range(0, height, MDT_CHUNK_SIZE):
+            r1 = min(r0 + MDT_CHUNK_SIZE, height)
+            for c0 in range(0, width, MDT_CHUNK_SIZE):
+                c1 = min(c0 + MDT_CHUNK_SIZE, width)
+
+                chunk_h = r1 - r0
+                chunk_w = c1 - c0
+
+                pixel_x = left + (c0 + np.arange(chunk_w) + 0.5) * resolution
+                pixel_y = top  - (r0 + np.arange(chunk_h) + 0.5) * resolution
+                grid_x, grid_y = np.meshgrid(pixel_x, pixel_y)
+                query_points   = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+
+                k = min(IDW_K_NEIGHBORS, len(xs))
+                distances, indices = tree.query(query_points, k=k, workers=-1, eps=0.0)
+
+                if distances.ndim == 1:
+                    distances = distances[:, np.newaxis]
+                    indices   = indices[:, np.newaxis]
+
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    # Peso IDW padrão
+                    weights = 1.0 / (distances ** IDW_POWER + 1e-12)
+
+                    # Pontos coincidentes: peso dominante
+                    exact = distances[:, 0] == 0
+                    weights[exact] = 0.0
+                    weights[exact, 0] = 1.0
+
+                    z_neighbors  = zs[indices]
+                    weighted_sum = np.nansum(z_neighbors * weights, axis=1)
+                    weight_sum   = np.nansum(weights, axis=1)
+
+                    chunk_idw = np.full(chunk_h * chunk_w, np.nan, dtype=np.float32)
+                    valid = weight_sum > 0
+                    chunk_idw[valid] = weighted_sum[valid] / weight_sum[valid]
+
+                full_raster[r0:r1, c0:c1] = chunk_idw.reshape(chunk_h, chunk_w)
+                pbar.update(1)
+
+    # ------------------------------------------------------------------
+    # 4. Pós-suavização Gaussiana (elimina artefatos de célula Voronoi)
+    # ------------------------------------------------------------------
+    if IDW_SMOOTH_SIGMA > 0:
+        log_message(f"\n   Aplicando suavizacao Gaussiana (sigma={IDW_SMOOTH_SIGMA})...", log_file)
+        t_sm = time.time()
+
+        # Substitui NaN por média local antes de suavizar, depois restaura
+        nan_mask = np.isnan(full_raster)
+        temp = full_raster.copy()
+        temp[nan_mask] = np.nanmean(full_raster)          # fill temporário
+
+        smoothed    = gaussian_filter(temp,  sigma=IDW_SMOOTH_SIGMA, mode='nearest')
+        smooth_mask = gaussian_filter((~nan_mask).astype(np.float32),
+                                       sigma=IDW_SMOOTH_SIGMA, mode='nearest')
+
+        with np.errstate(invalid='ignore'):
+            full_raster = np.where(smooth_mask > 0.01,
+                                   smoothed / smooth_mask,   # normaliza bordas
+                                   np.nan).astype(np.float32)
+        full_raster[nan_mask & (smooth_mask <= 0.01)] = np.nan
+
+        log_message(f"   -> Suavizacao concluida em {format_time(time.time() - t_sm)}", log_file)
+
+    # ------------------------------------------------------------------
+    # 5. Gravar GeoTIFF final
+    # ------------------------------------------------------------------
     with rasterio.open(output_path, "w", **meta) as dst:
-        with tqdm(total=total_chunks, desc="IDW chunks", unit="chunk") as pbar:
-            for r0 in range(0, height, MDT_CHUNK_SIZE):
-                r1 = min(r0 + MDT_CHUNK_SIZE, height)
-                for c0 in range(0, width, MDT_CHUNK_SIZE):
-                    c1 = min(c0 + MDT_CHUNK_SIZE, width)
-
-                    chunk_h = r1 - r0
-                    chunk_w = c1 - c0
-
-                    pixel_x = left + (c0 + np.arange(chunk_w) + 0.5) * resolution
-                    pixel_y = top - (r0 + np.arange(chunk_h) + 0.5) * resolution
-                    grid_x, grid_y = np.meshgrid(pixel_x, pixel_y)
-                    query_points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
-
-                    distances, indices = tree.query(query_points, k=min(IDW_K_NEIGHBORS, len(xs)),
-                                                     workers=-1, eps=0.0)
-
-                    if distances.ndim == 1:
-                        distances = distances[:, np.newaxis]
-                        indices = indices[:, np.newaxis]
-
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        weights = 1.0 / (distances ** IDW_POWER + 1e-12)
-                        weights[distances == 0] = 1e12
-
-                        z_neighbors = zs[indices]
-                        weighted_sum = np.nansum(z_neighbors * weights, axis=1)
-                        weight_sum = np.nansum(weights, axis=1)
-
-                        valid = weight_sum > 0
-                        chunk_idw = np.full(chunk_h * chunk_w, np.nan, dtype=np.float32)
-                        chunk_idw[valid] = weighted_sum[valid] / weight_sum[valid]
-
-                        zero_dist = distances[:, 0:1].ravel() == 0
-                        if np.any(zero_dist):
-                            chunk_idw[zero_dist] = zs[indices[zero_dist, 0]]
-
-                    dst.write(chunk_idw.reshape(chunk_h, chunk_w), 1,
-                              window=rasterio.windows.Window(c0, r0, chunk_w, chunk_h))
-                    pbar.update(1)
+        dst.write(full_raster, 1)
 
     t_total = time.time() - t0
     log_message(f"\n   -> MDT gerado em: {output_path}", log_file)
@@ -607,86 +606,197 @@ def generate_mdt_idw(xs, ys, zs, bounds, resolution, epsg, output_dir, base_name
         data = result.read(1)
         valid_data = data[~np.isnan(data)]
         if len(valid_data) > 0:
-            log_message(f"   -> MDT Z min: {np.nanmin(valid_data):.2f}m", log_file)
-            log_message(f"   -> MDT Z max: {np.nanmax(valid_data):.2f}m", log_file)
-            log_message(f"   -> MDT Z medio: {np.nanmean(valid_data):.2f}m", log_file)
-            log_message(f"   -> MDT STD: {np.nanstd(valid_data):.2f}m", log_file)
-            log_message(f"   -> Pixels preenchidos: {len(valid_data):,} de {data.size:,} ({100*len(valid_data)/data.size:.1f}%)", log_file)
+            log_message(f"   -> MDT Z min:  {np.nanmin(valid_data):.2f}m", log_file)
+            log_message(f"   -> MDT Z max:  {np.nanmax(valid_data):.2f}m", log_file)
+            log_message(f"   -> MDT Z medio:{np.nanmean(valid_data):.2f}m", log_file)
+            log_message(f"   -> MDT STD:    {np.nanstd(valid_data):.2f}m", log_file)
+            log_message(f"   -> Pixels preenchidos: {len(valid_data):,} de {data.size:,} "
+                        f"({100*len(valid_data)/data.size:.1f}%)", log_file)
 
     return output_path
 
 
 # =============================================================================
-# MAIN
+# ETAPA 6: FILTRAGEM AGRESSIVA DO SHAPE (POS-MDT)
+# =============================================================================
+
+def filter_shape_aggressive(shp_path, gsd, process_dir, log_file):
+    """Remove buracos pequenos e features muito grandes do shape filtrado."""
+    log_message("\n" + "=" * 60, log_file)
+    log_message("ETAPA 6: FILTRAGEM AGRESSIVA DO SHAPE (POS-MDT)", log_file)
+    log_message("=" * 60, log_file)
+    t0 = time.time()
+
+    # Carregar shape
+    gdf = gpd.read_file(shp_path)
+    log_message(f"Shape carregado: {shp_path}", log_file)
+    log_message(f"Total de features: {len(gdf)}", log_file)
+
+    # Thresholds
+    min_hole_area_sq_m = GROUP_PIXELS_SHP * (gsd ** 2)       # GROUP_PIXELS * 5 * gsd²
+    max_feature_area_sq_m = GROUP_PIXELS_SHP * 5 * (gsd ** 2)  # GROUP_PIXELS * 25 * gsd²
+
+    log_message(f"GSD: {gsd:.4f}m", log_file)
+    log_message(f"GROUP_PIXELS_SHP: {GROUP_PIXELS_SHP} pixels = {GROUP_PIXELS} * 5", log_file)
+    log_message(f"Area minima para buracos (GROUP_PIXELS_SHP * gsd²): {min_hole_area_sq_m:.2f} m²", log_file)
+    log_message(f"Area maxima para feicoes (GROUP_PIXELS_SHP * 5 * gsd²): {max_feature_area_sq_m:.2f} m²", log_file)
+
+    # Remover buracos pequenos de cada poligono
+    cleaned_geometries = []
+    total_holes_removed = 0
+
+    for idx, row in gdf.iterrows():
+        geom = row.geometry
+        
+        if geom.geom_type == 'Polygon':
+            # Exterior ring
+            exterior = geom.exterior
+            # Filtrar interior rings (buracos) por area
+            new_interiors = []
+            for interior in geom.interiors:
+                hole_poly = Polygon(interior)
+                if hole_poly.area >= min_hole_area_sq_m:
+                    new_interiors.append(interior)
+                else:
+                    total_holes_removed += 1
+            
+            # Recriar poligono sem buracos pequenos
+            cleaned_geom = Polygon(exterior, new_interiors) if new_interiors else Polygon(exterior)
+            cleaned_geometries.append(cleaned_geom)
+            
+        elif geom.geom_type == 'MultiPolygon':
+            # Processar cada sub-poligono
+            cleaned_sub_polys = []
+            for sub_poly in geom.geoms:
+                exterior = sub_poly.exterior
+                new_interiors = []
+                for interior in sub_poly.interiors:
+                    hole_poly = Polygon(interior)
+                    if hole_poly.area >= min_hole_area_sq_m:
+                        new_interiors.append(interior)
+                    else:
+                        total_holes_removed += 1
+                
+                cleaned_sub = Polygon(exterior, new_interiors) if new_interiors else Polygon(exterior)
+                cleaned_sub_polys.append(cleaned_sub)
+            
+            # MultiPolygon ou Polygon unico
+            if len(cleaned_sub_polys) > 1:
+                cleaned_geometries.append(MultiPolygon(cleaned_sub_polys))
+            else:
+                cleaned_geometries.append(cleaned_sub_polys[0])
+        else:
+            cleaned_geometries.append(geom)
+
+    log_message(f"Total de buracos removidos: {total_holes_removed}", log_file)
+
+    # Criar GeoDataFrame com geometrias limpas
+    gdf_cleaned = gpd.GeoDataFrame(geometry=cleaned_geometries, crs=gdf.crs)
+    
+    # Calcular area como atributo
+    gdf_cleaned['area_m2'] = gdf_cleaned.area
+    
+    # Remover features com area 0 (poligonos degenerados)
+    gdf_cleaned = gdf_cleaned[gdf_cleaned['area_m2'] > 0].copy()
+    
+    log_message(f"Features apos remocao de buracos: {len(gdf_cleaned)}", log_file)
+    if len(gdf_cleaned) > 0:
+        log_message(f"Areas (min/mean/max): {gdf_cleaned['area_m2'].min():.2f} / "
+                    f"{gdf_cleaned['area_m2'].mean():.2f} / {gdf_cleaned['area_m2'].max():.2f} m²", log_file)
+
+    # Aplicar filtro: remover feicoes com area > max_feature_area_sq_m (5x maiores que GROUP_PIXELS_SHP)
+    gdf_filtered = gdf_cleaned[gdf_cleaned['area_m2'] <= max_feature_area_sq_m].copy()
+    n_removed_area = len(gdf_cleaned) - len(gdf_filtered)
+
+    log_message(f"Features apos filtro de area maxima: {len(gdf_filtered)} (removidas {n_removed_area} feicoes "
+                f"com area > {max_feature_area_sq_m:.2f} m²)", log_file)
+
+    if not gdf_filtered.empty:
+        log_message(f"Areas finais (min/mean/max): {gdf_filtered['area_m2'].min():.2f} / "
+                    f"{gdf_filtered['area_m2'].mean():.2f} / {gdf_filtered['area_m2'].max():.2f} m²", log_file)
+
+    # Salvar shape filtrado
+    output_shp_path = os.path.join(process_dir, "filtered_groups_aggressive.shp")
+    if not gdf_filtered.empty:
+        gdf_filtered.to_file(output_shp_path)
+        log_message(f"Shape filtrado salvo em: {output_shp_path}", log_file)
+    else:
+        log_message("Nenhuma feature restante apos filtragem agressiva.", log_file)
+        output_shp_path = None
+
+    # Salvar shape com buracos removidos (antes do filtro de area maxima) para debug
+    gdf_no_holes_path = os.path.join(process_dir, "filtered_groups_no_holes.shp")
+    if not gdf_cleaned.empty:
+        gdf_cleaned.to_file(gdf_no_holes_path)
+        log_message(f"Shape sem buracos pequenos salvo em: {gdf_no_holes_path}", log_file)
+
+    log_message(f"Tempo Etapa 6: {format_time(time.time() - t0)}", log_file)
+
+    return output_shp_path
+
+
+# =============================================================================
+# PIPELINE PRINCIPAL
 # =============================================================================
 
 if __name__ == "__main__":
-    start = time.time()
-    output_dir = Path(OUTPUT_DIR)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    input_path = Path(INPUT_IMAGE_PATH)
-    output_base_name = input_path.stem
-
-    log_path = output_dir / f"{output_base_name}_process_info.txt"
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"\n{'#' * 80}\n# EXECUCAO COMPLETA (RF + MDT): {time.strftime('%d/%m/%Y %H:%M:%S')}\n{'#' * 80}\n\n")
-
-    log_message(f"Arquivo de log: {log_path}", log_path)
-    log_message(f"Imagem de entrada: {INPUT_IMAGE_PATH}", log_path)
-    log_message(f"MDS de referencia: {MDS_PATH}", log_path)
-    for class_name, config in CLASSIFICATION_CONFIG.items():
-        if config.get("shp_path"):
-            log_message(f"Pontos de treino de {class_name}: {config['shp_path']}", log_path)
-
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    log_file = os.path.join(OUTPUT_DIR, "process_log.txt")
+    
     try:
-        # --- ETAPA 1: Features ---
-        features, labels = extract_features_for_training(INPUT_IMAGE_PATH, CLASSIFICATION_CONFIG, BUFFER_SIZE_METERS, log_path)
-        if len(features) == 0:
-            raise ValueError("Nenhuma feature extraida.")
-
-        # --- ETAPA 2: Treinamento ---
-        model = train_model(features, labels, log_path)
-
-        # --- ETAPA 3: Classificacao + LAS ---
-        las_paths = generate_probability_maps(INPUT_IMAGE_PATH, model, CLASSIFICATION_CONFIG, OUTPUT_DIR, log_path)
-
-        # --- Determinar EPSG ---
-        log_message("\n" + "=" * 60, log_path)
-        log_message("ETAPA: DETERMINACAO DO EPSG PARA MDT", log_path)
-        log_message("=" * 60, log_path)
-        epsg = FORCE_EPSG
-        # Tentar do LAS gerado se existir
-        if "solo" in las_paths:
-            epsg_las = get_epsg_from_las(las_paths["solo"])
-            if epsg_las:
-                epsg = epsg_las
-        # Se nao, tentar do MDS
-        if epsg is None:
-            with rasterio.open(MDS_PATH) as mds_src:
-                if mds_src.crs:
-                    epsg = str(mds_src.crs)
-        if epsg is None:
-            epsg = FORCE_EPSG
-        log_message(f"   -> EPSG utilizado: {epsg}", log_path)
-
-        # --- ETAPA 4: Extrair Z do MDS ---
-        if "solo" not in las_paths:
-            raise ValueError("LAS de solo nao foi gerado. Nao e possivel criar MDT.")
-        las_solo_path = las_paths["solo"]
-        xs, ys, zs = extract_z_from_mds(las_solo_path, MDS_PATH, log_path)
-
-        # --- ETAPA 5: Gerar MDT ---
-        with rasterio.open(INPUT_IMAGE_PATH) as src:
-            bounds = src.bounds
-        mdt_path = generate_mdt_idw(xs, ys, zs, bounds, MDT_RESOLUTION, epsg, OUTPUT_DIR, f"{output_base_name}_MDT", log_path)
-
-        log_message("\n" + "=" * 60, log_path)
-        log_message(f"PROCESSO CONCLUIDO COM SUCESSO!", log_path)
-        log_message(f"Tempo total: {format_time(time.time() - start)}", log_path)
-        log_message("=" * 60, log_path)
-
+        # ETAPA 1: Feature extraction
+        features, labels, f_names = extract_features_for_training(
+            INPUT_IMAGE_PATH, MDS_PATH, CLASSIFICATION_CONFIG, 
+            BUFFER_SIZE_METERS, log_file, PROCESS_DIR
+        )
+        
+        # ETAPA 2: Treinamento
+        model = train_model(features, labels, f_names, log_file)
+        
+        # ETAPA 3: Mapas de probabilidade + LAS filtrado + Shape
+        las_path, shape_paths = generate_probability_maps(
+            INPUT_IMAGE_PATH, MDS_PATH, model, CLASSIFICATION_CONFIG, 
+            OUTPUT_DIR, log_file
+        )
+        
+        if las_path is not None:
+            # ETAPA 4: Extrair Z do MDS para os pontos LAS
+            xs, ys, zs = extract_z_from_mds(las_path, MDS_PATH, log_file)
+            
+            # ETAPA 5: Gerar MDT por IDW
+            # Usar bounds do LAS para definir a extensao do MDT
+            bounds = (xs.min(), ys.min(), xs.max(), ys.max())
+            mdt_path = generate_mdt_idw(
+                xs, ys, zs, bounds, MDT_RESOLUTION, FORCE_EPSG,
+                OUTPUT_DIR, f"{Path(INPUT_IMAGE_PATH).stem}_MDT_IDW", log_file
+            )
+            
+            # ETAPA 6: Filtragem agressiva do shape (pos-MDT)
+            # Usar o shape gerado na etapa 3 (classe "solo")
+            gsd = abs(rasterio.open(INPUT_IMAGE_PATH).transform[0])
+            
+            # Encontrar shape path da classe que gerou pontos
+            shape_filtered_path = None
+            for class_name, shp in shape_paths.items():
+                if shp is not None:
+                    shape_filtered_path = shp
+                    log_message(f"Usando shape da classe '{class_name}' para Etapa 6: {shp}", log_file)
+                    break
+            
+            if shape_filtered_path is not None and os.path.exists(shape_filtered_path):
+                aggressive_shp_path = filter_shape_aggressive(
+                    shape_filtered_path, gsd, PROCESS_DIR, log_file
+                )
+                log_message(f"\nPipeline completo! MDT: {mdt_path}", log_file)
+                log_message(f"Shape filtrado (agressivo): {aggressive_shp_path}", log_file)
+            else:
+                log_message("Nenhum shape disponivel para Etapa 6.", log_file)
+                log_message(f"\nPipeline completo! MDT gerado: {mdt_path}", log_file)
+        else:
+            log_message("Nenhum LAS gerado na Etapa 3. Pulando Etapas 4, 5 e 6.", log_file)
+        
+        log_message("Processo concluído com sucesso.", log_file)
+        
     except Exception as e:
-        log_message(f"\nERRO FATAL: {str(e)}", log_path)
-        import traceback
-        log_message(traceback.format_exc(), log_path)
+        log_message(f"Erro: {str(e)}", log_file)
+        raise

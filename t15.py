@@ -14,6 +14,7 @@ from tqdm import tqdm
 import warnings
 from scipy import ndimage
 from shapely.geometry import Point
+from shapely.ops import unary_union
 
 warnings.filterwarnings("ignore")
 
@@ -52,7 +53,7 @@ CLASSIFICATION_CONFIG = {
 # =============================================================================
 
 def log_message(message, log_file=None, also_print=True):
-    msg = f"[{time.strftime("%H:%M:%S")}] {message}"
+    msg = f"[{time.strftime('%H:%M:%S')}] {message}"
     if also_print:
         print(msg)
     if log_file:
@@ -144,11 +145,23 @@ def filter_points_by_spatial_group(
     gdf = gpd.GeoDataFrame(geometry=geometry, crs=FORCE_EPSG)
     log_message(f"Total de pontos para filtragem: {len(gdf)}", log_file)
 
-    # Aplicar buffer e dissolver
+    # Aplicar buffer em todos os pontos e usar unary_union para fundir APENAS
+    # buffers sobrepostos, mantendo grupos separados (não-vizinhos ficam separados)
     log_message(f"Aplicando buffer de {buffer_dist_meters:.2f}m e dissolvendo polígonos...", log_file)
     buffered_series = gdf.buffer(buffer_dist_meters)
-    buffered_gdf = gpd.GeoDataFrame(geometry=buffered_series, crs=FORCE_EPSG)
-    dissolved_gdf = buffered_gdf.dissolve()
+    log_message(f"Buffers aplicados. Iniciando dissolução...", log_file)
+    # unary_union funde apenas geometrias que se tocam/sobrepõem
+    dissolved = unary_union(buffered_series.tolist())
+    log_message(f"Dissolução concluída. Tipo geométrico resultante: {dissolved.geom_type}", log_file)
+    # Explodir o resultado em polígonos individuais
+    if dissolved.geom_type == 'MultiPolygon':
+        polygons = list(dissolved.geoms)
+    elif dissolved.geom_type == 'Polygon':
+        polygons = [dissolved]
+    else:
+        polygons = []
+    
+    dissolved_gdf = gpd.GeoDataFrame(geometry=polygons, crs=FORCE_EPSG)
     log_message(f"Polígonos dissolvidos gerados: {len(dissolved_gdf)}", log_file)
 
     # Filtrar polígonos por área mínima
